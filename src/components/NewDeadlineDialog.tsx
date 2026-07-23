@@ -85,8 +85,12 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
             </div>
             <div className="space-y-1.5">
               <Label>Catégorie</Label>
-              <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Client, Domaine…" className="h-11 rounded-xl"/>
+              <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Domaine, SSL, Hébergement…" className="h-11 rounded-xl"/>
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Nom du client</Label>
+            <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Acme SAS" className="h-11 rounded-xl"/>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -114,20 +118,33 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
             <Label>Description (optionnel)</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="rounded-xl"/>
           </div>
-          <div className="space-y-2">
-            <Label>Rappels</Label>
-            <div className="flex flex-wrap gap-2">
-              {REMINDER_PRESETS.map((p) => {
-                const active = reminders.includes(p.v);
-                return (
-                  <button
-                    type="button"
-                    key={p.v}
-                    onClick={() => toggle(p.v)}
-                    className={`px-3 h-8 rounded-full text-xs font-medium border transition ${active ? "bg-ink text-cream border-ink" : "bg-background border-border hover:bg-secondary"}`}
-                  >{p.label}</button>
-                );
-              })}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Rappels (jours avant)</Label>
+              <div className="flex flex-wrap gap-2">
+                {REMINDER_PRESETS.map((p) => {
+                  const active = alertRules.includes(p.v);
+                  return (
+                    <button
+                      type="button"
+                      key={p.v}
+                      onClick={() => toggle(p.v)}
+                      className={`px-3 h-8 rounded-full text-xs font-medium border transition ${active ? "bg-ink text-cream border-ink" : "bg-background border-border hover:bg-secondary"}`}
+                    >{p.label}</button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Heure d'envoi</Label>
+              <Select value={String(alertHour)} onValueChange={(v) => setAlertHour(parseInt(v, 10))}>
+                <SelectTrigger className="h-11 rounded-xl"><SelectValue/></SelectTrigger>
+                <SelectContent className="max-h-64">
+                  {Array.from({ length: 24 }, (_, i) => (
+                    <SelectItem key={i} value={String(i)}>{String(i).padStart(2, "0")}:00</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
