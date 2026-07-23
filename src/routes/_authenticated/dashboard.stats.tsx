@@ -6,6 +6,16 @@ import { format, startOfMonth, subMonths } from "date-fns";
 import { fr } from "date-fns/locale";
 
 export const Route = createFileRoute("/_authenticated/dashboard/stats")({
+  head: () => ({
+    meta: [
+      { title: "Statistiques — Deadly" },
+      { name: "description", content: "Analysez vos deadlines respectées, manquées et à venir avec les statistiques Deadly." },
+      { property: "og:title", content: "Statistiques — Deadly" },
+      { property: "og:description", content: "Suivez la performance de gestion de vos échéances dans Deadly." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Stats,
 });
 

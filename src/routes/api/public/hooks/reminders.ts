@@ -3,21 +3,22 @@ import { processReminders } from "@/lib/reminders.server";
 
 async function authorize(request: Request): Promise<Response | null> {
   const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return new Response(JSON.stringify({ error: "CRON_SECRET not configured" }), {
-      status: 500,
-      headers: { "content-type": "application/json" },
-    });
-  }
   const auth = request.headers.get("authorization") ?? "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : auth;
-  if (token !== expected) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { "content-type": "application/json" },
-    });
-  }
-  return null;
+  if (expected && token === expected) return null;
+
+  const apikey = request.headers.get("apikey") ?? "";
+  const publishableKey =
+    process.env.SUPABASE_PUBLISHABLE_KEY ??
+    process.env.SUPABASE_ANON_KEY ??
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (publishableKey && (apikey === publishableKey || token === publishableKey)) return null;
+
+  return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    status: 401,
+    headers: { "content-type": "application/json" },
+  });
 }
 
 export const Route = createFileRoute("/api/public/hooks/reminders")({

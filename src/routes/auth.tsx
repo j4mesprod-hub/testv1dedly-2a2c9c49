@@ -8,6 +8,16 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
+  head: () => ({
+    meta: [
+      { title: "Connexion Deadly" },
+      { name: "description", content: "Connectez-vous à Deadly avec Google pour gérer vos deadlines et rappels de renouvellement." },
+      { property: "og:title", content: "Connexion Deadly" },
+      { property: "og:description", content: "Accédez à votre espace Deadly pour suivre vos domaines, SSL, hébergements et licences." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: AuthPage,
 });
 

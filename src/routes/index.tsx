@@ -4,6 +4,16 @@ import { DeadlyLogo } from "@/components/DeadlyLogo";
 import { AnimatedDashboardPreview } from "@/components/AnimatedDashboardPreview";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Deadly — Suivi de deadlines" },
+      { name: "description", content: "Deadly centralise vos échéances domaines, SSL, hébergements et licences avec des rappels email personnalisés." },
+      { property: "og:title", content: "Deadly — Suivi de deadlines" },
+      { property: "og:description", content: "Gardez le contrôle sur les renouvellements critiques avec un dashboard clair et des alertes automatiques." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Landing,
 });
 

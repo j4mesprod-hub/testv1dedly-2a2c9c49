@@ -4,6 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/auth/callback")({
+  head: () => ({
+    meta: [
+      { title: "Connexion en cours — Deadly" },
+      { name: "description", content: "Finalisation sécurisée de votre connexion à Deadly." },
+      { property: "og:title", content: "Connexion en cours — Deadly" },
+      { property: "og:description", content: "Finalisation sécurisée de votre connexion à Deadly." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Callback,
 });
 

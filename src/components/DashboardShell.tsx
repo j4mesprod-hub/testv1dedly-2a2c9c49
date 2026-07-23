@@ -27,11 +27,13 @@ function NavIcon({
   label,
   icon: Icon,
   active,
+  expanded,
 }: {
   to: string;
   label: string;
   icon: typeof LayoutDashboard;
   active: boolean;
+  expanded: boolean;
 }) {
   return (
     <Tooltip>
@@ -39,19 +41,30 @@ function NavIcon({
         <Link
           to={to}
           className={cn(
-            "grid h-11 w-11 place-items-center rounded-full transition",
+            "group flex h-11 items-center rounded-full transition",
+            expanded ? "w-full justify-start gap-3 px-3" : "w-11 justify-center",
             active
               ? "bg-cream text-ink"
               : "text-cream/60 hover:text-cream hover:bg-cream/10",
           )}
           aria-label={label}
         >
-          <Icon className="h-[18px] w-[18px]" />
+          <Icon className="h-[18px] w-[18px] shrink-0" />
+          <span
+            className={cn(
+              "truncate text-sm font-semibold transition-opacity",
+              expanded ? "opacity-100" : "sr-only opacity-0",
+            )}
+          >
+            {label}
+          </span>
         </Link>
       </TooltipTrigger>
-      <TooltipContent side="right" className="bg-ink text-cream border-ink">
-        {label}
-      </TooltipContent>
+      {!expanded && (
+        <TooltipContent side="right" className="bg-ink text-cream border-ink">
+          {label}
+        </TooltipContent>
+      )}
     </Tooltip>
   );
 }
@@ -61,6 +74,7 @@ export function DashboardShell({ children, title, subtitle, action }: { children
   const { data: profile } = useProfile();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
   const isActive = (to: string, exact?: boolean) => (exact ? pathname === to : pathname === to || pathname.startsWith(to + "/"));
 
@@ -80,23 +94,45 @@ export function DashboardShell({ children, title, subtitle, action }: { children
     <TooltipProvider delayDuration={200}>
       <div className="min-h-screen bg-background text-foreground">
         {/* Desktop floating sidebar */}
-        <aside className="hidden md:flex fixed top-4 bottom-4 left-4 z-40 w-16 flex-col items-center justify-between rounded-[28px] bg-ink text-cream py-4 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)]">
-          <div className="flex flex-col items-center gap-2">
-            <Link to="/" aria-label="Deadly" className="grid h-11 w-11 place-items-center rounded-full bg-cream text-ink">
-              <CheckCircle2 className="h-[18px] w-[18px]" strokeWidth={2.4} />
+        <aside
+          onMouseEnter={() => setSidebarExpanded(true)}
+          onMouseLeave={() => setSidebarExpanded(false)}
+          className={cn(
+            "hidden md:flex fixed top-4 bottom-4 left-4 z-40 flex-col justify-between rounded-[28px] bg-ink text-cream py-4 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)] transition-[width,padding] duration-300 ease-out",
+            sidebarExpanded ? "w-56 px-3" : "w-16 items-center px-2",
+          )}
+        >
+          <div className="flex w-full flex-col items-center gap-2">
+            <Link
+              to="/"
+              aria-label="Deadly"
+              className={cn(
+                "flex h-11 items-center rounded-full bg-cream text-ink transition-all",
+                sidebarExpanded ? "w-full justify-start gap-3 px-3" : "w-11 justify-center",
+              )}
+            >
+              <CheckCircle2 className="h-[18px] w-[18px] shrink-0" strokeWidth={2.4} />
+              <span className={cn("truncate text-sm font-extrabold", sidebarExpanded ? "block" : "sr-only")}>Deadly</span>
             </Link>
             <NewDeadlineDialog trigger={
-              <button aria-label="Nouvelle deadline" className="grid h-11 w-11 place-items-center rounded-full border border-cream/25 text-cream hover:bg-cream/10 transition">
-                <Plus className="h-[18px] w-[18px]" />
+              <button
+                aria-label="Nouvelle deadline"
+                className={cn(
+                  "flex h-11 items-center rounded-full border border-cream/25 text-cream hover:bg-cream/10 transition-all",
+                  sidebarExpanded ? "w-full justify-start gap-3 px-3" : "w-11 justify-center",
+                )}
+              >
+                <Plus className="h-[18px] w-[18px] shrink-0" />
+                <span className={cn("truncate text-sm font-semibold", sidebarExpanded ? "block" : "sr-only")}>Nouvelle</span>
               </button>
             }/>
             <div className="h-px w-6 bg-cream/10 my-1" />
             {nav.map((item) => (
-              <NavIcon key={item.to} to={item.to} label={item.label} icon={item.icon} active={isActive(item.to, item.exact)} />
+              <NavIcon key={item.to} to={item.to} label={item.label} icon={item.icon} active={isActive(item.to, item.exact)} expanded={sidebarExpanded} />
             ))}
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <NavIcon to="/dashboard/settings" label="Paramètres" icon={Settings} active={isActive("/dashboard/settings")} />
+          <div className="flex w-full flex-col items-center gap-2">
+            <NavIcon to="/dashboard/settings" label="Paramètres" icon={Settings} active={isActive("/dashboard/settings")} expanded={sidebarExpanded} />
           </div>
         </aside>
 
