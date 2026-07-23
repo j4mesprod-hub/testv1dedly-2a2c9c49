@@ -8,8 +8,12 @@ async function authorize(request: Request): Promise<Response | null> {
   if (expected && token === expected) return null;
 
   const apikey = request.headers.get("apikey") ?? "";
-  const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  if (publishableKey && apikey === publishableKey) return null;
+  const publishableKey =
+    process.env.SUPABASE_PUBLISHABLE_KEY ??
+    process.env.SUPABASE_ANON_KEY ??
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (publishableKey && (apikey === publishableKey || token === publishableKey)) return null;
 
   return new Response(JSON.stringify({ error: "Unauthorized" }), {
     status: 401,
