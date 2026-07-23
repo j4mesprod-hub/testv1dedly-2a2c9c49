@@ -1,14 +1,13 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { LayoutDashboard, Calendar, ListChecks, BarChart3, Settings, Search, Plus, LogOut } from "lucide-react";
-import { DeadlyLogo } from "./DeadlyLogo";
+import { LayoutDashboard, Calendar, ListChecks, BarChart3, Settings, Search, Plus, LogOut, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./NotificationsBell";
 import { NewDeadlineDialog } from "./NewDeadlineDialog";
 import { useProfile } from "@/hooks/use-profile";
 import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const nav = [
   { to: "/dashboard", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
@@ -23,8 +22,41 @@ function initials(name?: string | null, email?: string | null) {
   return (parts[0]?.[0] ?? "?").toUpperCase() + (parts[1]?.[0] ?? "").toUpperCase();
 }
 
+function NavIcon({
+  to,
+  label,
+  icon: Icon,
+  active,
+}: {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  active: boolean;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Link
+          to={to}
+          className={cn(
+            "grid h-11 w-11 place-items-center rounded-full transition",
+            active
+              ? "bg-cream text-ink"
+              : "text-cream/60 hover:text-cream hover:bg-cream/10",
+          )}
+          aria-label={label}
+        >
+          <Icon className="h-[18px] w-[18px]" />
+        </Link>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="bg-ink text-cream border-ink">
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function DashboardShell({ children, title, subtitle, action }: { children: ReactNode; title: string; subtitle?: string; action?: ReactNode }) {
-  const [hovered, setHovered] = useState(false);
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const { data: profile } = useProfile();
   const navigate = useNavigate();
@@ -45,31 +77,96 @@ export function DashboardShell({ children, title, subtitle, action }: { children
   const inits = initials(profile?.display_name, profile?.reminder_email);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
-      <aside
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 bg-ink text-cream flex flex-col transition-[width] duration-300 ease-out",
-          hovered ? "w-60" : "w-16",
-        )}
-      >
-        <div className="h-16 flex items-center px-4 border-b border-cream/10 overflow-hidden">
-          <Link to="/" className="flex items-center gap-2">
-            <DeadlyLogo variant="light" showText={hovered} />
-          </Link>
+    <TooltipProvider delayDuration={200}>
+      <div className="min-h-screen bg-background text-foreground">
+        {/* Desktop floating sidebar */}
+        <aside className="hidden md:flex fixed top-4 bottom-4 left-4 z-40 w-16 flex-col items-center justify-between rounded-[28px] bg-ink text-cream py-4 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)]">
+          <div className="flex flex-col items-center gap-2">
+            <Link to="/" aria-label="Deadly" className="grid h-11 w-11 place-items-center rounded-full bg-cream text-ink">
+              <CheckCircle2 className="h-[18px] w-[18px]" strokeWidth={2.4} />
+            </Link>
+            <NewDeadlineDialog trigger={
+              <button aria-label="Nouvelle deadline" className="grid h-11 w-11 place-items-center rounded-full border border-cream/25 text-cream hover:bg-cream/10 transition">
+                <Plus className="h-[18px] w-[18px]" />
+              </button>
+            }/>
+            <div className="h-px w-6 bg-cream/10 my-1" />
+            {nav.map((item) => (
+              <NavIcon key={item.to} to={item.to} label={item.label} icon={item.icon} active={isActive(item.to, item.exact)} />
+            ))}
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <NavIcon to="/dashboard/settings" label="Paramètres" icon={Settings} active={isActive("/dashboard/settings")} />
+          </div>
+        </aside>
+
+        <div className="md:pl-24">
+          {/* Header */}
+          <header className="sticky top-0 z-20 bg-background/80 backdrop-blur border-b border-border">
+            <div className="h-16 flex items-center gap-3 px-4 md:px-8">
+              <form onSubmit={submitSearch} className="relative flex-1 max-w-md">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Rechercher…"
+                  className="w-full h-10 rounded-full bg-secondary pl-10 pr-4 text-sm outline-none border border-transparent focus:border-ink/20"
+                />
+              </form>
+              <div className="flex items-center gap-2 shrink-0">
+                {profile?.plan !== "pro" && (
+                  <Link to="/dashboard/settings" search={{ tab: "abonnement" } as never} className="hidden sm:grid rounded-full h-9 px-4 bg-ink text-cream hover:bg-ink/90 text-sm font-semibold place-items-center">
+                    Upgrade
+                  </Link>
+                )}
+                <NotificationsBell/>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="h-9 w-9 rounded-full overflow-hidden shrink-0">
+                      {profile?.avatar_url ? (
+                        <img src={profile.avatar_url} alt="" className="h-full w-full object-cover"/>
+                      ) : (
+                        <div className="h-full w-full bg-brand-orange/80 grid place-items-center text-ink font-semibold text-xs">{inits}</div>
+                      )}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>
+                      <div className="text-sm font-semibold truncate">{profile?.display_name ?? "Utilisateur"}</div>
+                      <div className="text-xs text-muted-foreground font-normal truncate">{profile?.reminder_email}</div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator/>
+                    {profile?.plan !== "pro" && (
+                      <DropdownMenuItem onClick={() => navigate({ to: "/dashboard/settings", search: { tab: "abonnement" } as never })} className="sm:hidden">
+                        Upgrade
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => navigate({ to: "/dashboard/settings" })}>
+                      <Settings className="h-4 w-4 mr-2"/> Paramètres
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={signOut} className="text-brand-red">
+                      <LogOut className="h-4 w-4 mr-2"/> Se déconnecter
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </header>
+
+          <main className="px-4 md:px-8 py-6 md:py-8 pb-28 md:pb-8">
+            <div className="flex items-start justify-between gap-4 mb-6 md:mb-8">
+              <div className="min-w-0">
+                <h1 className="font-display text-2xl md:text-4xl font-extrabold tracking-tight truncate">{title}</h1>
+                {subtitle && <p className="text-sm md:text-base text-muted-foreground mt-1">{subtitle}</p>}
+              </div>
+              {action && <div className="shrink-0">{action}</div>}
+            </div>
+            {children}
+          </main>
         </div>
 
-        <div className="p-3">
-          <NewDeadlineDialog trigger={
-            <button className="w-full h-10 rounded-xl bg-brand-orange text-ink flex items-center justify-center gap-2 font-semibold text-sm hover:bg-brand-orange/90 transition">
-              <Plus className="h-4 w-4" />
-              <span className={cn("whitespace-nowrap transition-opacity", hovered ? "opacity-100" : "opacity-0 w-0")}>Nouvelle deadline</span>
-            </button>
-          }/>
-        </div>
-
-        <nav className="flex-1 px-3 space-y-1 mt-2">
+        {/* Mobile bottom floating nav */}
+        <nav className="md:hidden fixed bottom-3 left-1/2 -translate-x-1/2 z-40 flex items-center gap-1 rounded-full bg-ink text-cream px-2 py-2 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)]">
           {nav.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.to, item.exact);
@@ -77,99 +174,33 @@ export function DashboardShell({ children, title, subtitle, action }: { children
               <Link
                 key={item.to}
                 to={item.to}
+                aria-label={item.label}
                 className={cn(
-                  "flex items-center gap-3 h-10 px-3 rounded-xl text-sm font-medium transition",
-                  active ? "bg-cream text-ink" : "text-cream/70 hover:bg-cream/10 hover:text-cream",
+                  "grid h-10 w-10 place-items-center rounded-full transition",
+                  active ? "bg-cream text-ink" : "text-cream/70 hover:text-cream",
                 )}
               >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className={cn("whitespace-nowrap transition-opacity", hovered ? "opacity-100" : "opacity-0")}>{item.label}</span>
+                <Icon className="h-[18px] w-[18px]" />
               </Link>
             );
           })}
-        </nav>
-
-        <div className="p-3 border-t border-cream/10 space-y-1">
+          <NewDeadlineDialog trigger={
+            <button aria-label="Nouvelle deadline" className="grid h-10 w-10 place-items-center rounded-full bg-brand-orange text-ink">
+              <Plus className="h-[18px] w-[18px]" />
+            </button>
+          }/>
           <Link
             to="/dashboard/settings"
+            aria-label="Paramètres"
             className={cn(
-              "flex items-center gap-3 h-10 px-3 rounded-xl text-sm font-medium transition",
-              isActive("/dashboard/settings") ? "bg-cream text-ink" : "text-cream/70 hover:bg-cream/10 hover:text-cream",
+              "grid h-10 w-10 place-items-center rounded-full transition",
+              isActive("/dashboard/settings") ? "bg-cream text-ink" : "text-cream/70",
             )}
           >
-            <Settings className="h-4 w-4 shrink-0" />
-            <span className={cn("whitespace-nowrap transition-opacity", hovered ? "opacity-100" : "opacity-0")}>Paramètres</span>
+            <Settings className="h-[18px] w-[18px]" />
           </Link>
-          <div className="flex items-center gap-3 h-12 px-2 mt-2">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover shrink-0"/>
-            ) : (
-              <div className="h-8 w-8 rounded-full bg-brand-orange/80 grid place-items-center text-ink font-semibold text-xs shrink-0">{inits}</div>
-            )}
-            <div className={cn("min-w-0 transition-opacity", hovered ? "opacity-100" : "opacity-0")}>
-              <div className="text-sm font-semibold truncate">{profile?.display_name ?? "Utilisateur"}</div>
-              <div className="text-[10px] text-cream/50 truncate">{profile?.reminder_email ?? ""}</div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <div className="flex-1 pl-16">
-        <header className="h-16 border-b border-border bg-background/80 backdrop-blur sticky top-0 z-20 flex items-center justify-between px-8">
-          <form onSubmit={submitSearch} className="relative w-96 max-w-full">
-            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher une deadline…"
-              className="w-full h-10 rounded-full bg-secondary pl-10 pr-4 text-sm outline-none border border-transparent focus:border-ink/20"
-            />
-          </form>
-          <div className="flex items-center gap-3">
-            {profile?.plan !== "pro" && (
-              <Link to="/dashboard/settings" search={{ tab: "abonnement" } as never} className="rounded-full h-9 px-4 bg-ink text-cream hover:bg-ink/90 text-sm font-semibold grid place-items-center">
-                Upgrade
-              </Link>
-            )}
-            <NotificationsBell/>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="h-9 w-9 rounded-full overflow-hidden">
-                  {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="" className="h-full w-full object-cover"/>
-                  ) : (
-                    <div className="h-full w-full bg-brand-orange/80 grid place-items-center text-ink font-semibold text-xs">{inits}</div>
-                  )}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <div className="text-sm font-semibold">{profile?.display_name ?? "Utilisateur"}</div>
-                  <div className="text-xs text-muted-foreground font-normal">{profile?.reminder_email}</div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator/>
-                <DropdownMenuItem onClick={() => navigate({ to: "/dashboard/settings" })}>
-                  <Settings className="h-4 w-4 mr-2"/> Paramètres
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={signOut} className="text-brand-red">
-                  <LogOut className="h-4 w-4 mr-2"/> Se déconnecter
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
-
-        <main className="p-8">
-          <div className="flex items-start justify-between gap-4 mb-8">
-            <div>
-              <h1 className="font-display text-4xl font-extrabold tracking-tight">{title}</h1>
-              {subtitle && <p className="text-muted-foreground mt-1">{subtitle}</p>}
-            </div>
-            {action}
-          </div>
-          {children}
-        </main>
+        </nav>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
