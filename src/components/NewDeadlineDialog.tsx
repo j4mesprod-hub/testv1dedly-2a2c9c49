@@ -29,14 +29,16 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
+  const [clientName, setClientName] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [priority, setPriority] = useState("medium");
   const [color, setColor] = useState("blue");
-  const [reminders, setReminders] = useState<number[]>([7, 1]);
+  const [alertRules, setAlertRules] = useState<number[]>([30, 7, 1, 0]);
+  const [alertHour, setAlertHour] = useState<number>(9);
   const create = useCreateDeadline();
 
   const toggle = (v: number) =>
-    setReminders((r) => (r.includes(v) ? r.filter((x) => x !== v) : [...r, v].sort((a, b) => b - a)));
+    setAlertRules((r) => (r.includes(v) ? r.filter((x) => x !== v) : [...r, v].sort((a, b) => b - a)));
 
   const submit = async () => {
     if (!title.trim() || !dueAt) {
@@ -48,15 +50,17 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
         title: title.trim(),
         description: description.trim() || undefined,
         category: category.trim() || undefined,
+        client_name: clientName.trim() || undefined,
         due_at: new Date(dueAt).toISOString(),
         priority,
         color,
-        reminder_offsets: reminders,
+        alert_rules: alertRules,
+        alert_hour: alertHour,
       });
       toast.success("Deadline créée");
       setOpen(false);
-      setTitle(""); setDescription(""); setCategory(""); setDueAt("");
-      setPriority("medium"); setColor("blue"); setReminders([7, 1]);
+      setTitle(""); setDescription(""); setCategory(""); setClientName(""); setDueAt("");
+      setPriority("medium"); setColor("blue"); setAlertRules([30, 7, 1, 0]); setAlertHour(9);
     } catch (e) {
       toast.error("Erreur", { description: e instanceof Error ? e.message : "" });
     }
