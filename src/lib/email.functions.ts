@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { processReminders } from "@/lib/reminders.server";
 
 const BREVO_URL = "https://api.brevo.com/v3/smtp/email";
 
@@ -41,7 +42,6 @@ function testHtml(name: string) {
   </div>`;
 }
 
-/** Envoyer un email de test à l'adresse de rappel du profil courant. */
 export const sendTestReminderEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -62,4 +62,39 @@ export const sendTestReminderEmail = createServerFn({ method: "POST" })
     });
 
     return { sent: true, to };
+  });
+
+/**
+ * Déclenche un envoi de rappels en mode dryRun depuis l'UI.
+ * - Ne met JAMAIS à jour `alerts_sent`.
+ * - Restreint aux deadlines de l'utilisateur connecté.
+ * - Nécessite `has_active_sub`.
+ */
+export const triggerReminderDryRun = createServerFn({ method: "POST" })
+  .inputValidator(
+    (input: {
+      testEmail: string;
+      deadlineId?: string;
+      overrideHour?: number;
+      forceSend?: boolean;
+    }) => input,
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }) => {
+    if (!data.testEmail || !data.testEmail.includes("@")) {
+      throw new Error("Adresse de test invalide");
+    }
+    const result = await processReminders({
+      forceUserId: context.userId,
+      dryRunTo: data.testEmail,
+      dryRun: true,
+      deadlineId: data.deadlineId,
+      overrideHour: data.overrideHour,
+      forceSend: data.forceSend === true,
+    });
+    return {
+      sent: result.totalSent,
+      details: result.details,
+      currentHour: result.currentHour,
+    };
   });
