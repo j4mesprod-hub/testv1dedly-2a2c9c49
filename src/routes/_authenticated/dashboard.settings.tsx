@@ -22,12 +22,19 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
 function SettingsPage() {
   const [tab, setTab] = useState<"profil"|"notifications"|"integrations"|"abonnement">(() => {
     if (typeof window === "undefined") return "profil";
-    const t = new URL(window.location.href).searchParams.get("tab");
+    const params = new URL(window.location.href).searchParams;
+    if (params.get("checkout")) return "abonnement";
+    const t = params.get("tab");
     return t === "notifications" || t === "integrations" || t === "abonnement" ? t : "profil";
   });
   useEffect(() => {
     const onPop = () => {
-      const t = new URL(window.location.href).searchParams.get("tab");
+      const params = new URL(window.location.href).searchParams;
+      if (params.get("checkout")) {
+        setTab("abonnement");
+        return;
+      }
+      const t = params.get("tab");
       if (t === "notifications" || t === "integrations" || t === "abonnement" || t === "profil") setTab(t as typeof tab);
     };
     window.addEventListener("popstate", onPop);
