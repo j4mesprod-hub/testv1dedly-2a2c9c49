@@ -33,10 +33,12 @@ export function useCreateDeadline() {
       title: string;
       description?: string;
       category?: string;
+      client_name?: string;
       due_at: string;
       priority: string;
       color: string;
-      reminder_offsets: number[];
+      alert_rules: number[];
+      alert_hour: number;
     }) => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Not authenticated");
