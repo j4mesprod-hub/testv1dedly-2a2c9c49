@@ -26,6 +26,14 @@ const STATUS_TONE: Record<DeadlineStatus, string> = {
   completed: "bg-brand-green/15 text-brand-green",
   overdue: "bg-brand-red/15 text-brand-red",
 };
+const PRIORITY_DOT: Record<string, string> = {
+  low: "bg-brand-green",
+  medium: "bg-brand-yellow",
+  high: "bg-brand-red",
+  green: "bg-brand-green",
+  yellow: "bg-brand-yellow",
+  red: "bg-brand-red",
+};
 
 function Tasks() {
   const { data: items = [] } = useDeadlines();
@@ -80,7 +88,7 @@ function Tasks() {
         <div className="rounded-2xl bg-card border border-border divide-y divide-border">
           {filtered.map((d) => (
             <div key={d.id} className="flex items-center gap-4 p-4 animate-fade-in">
-              <div className={`h-2 w-2 rounded-full bg-brand-${d.color}`}/>
+              <div className={`h-2 w-2 rounded-full ${PRIORITY_DOT[d.priority] ?? PRIORITY_DOT[d.color] ?? "bg-brand-yellow"}`}/>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <div className="font-semibold truncate">{d.title}</div>

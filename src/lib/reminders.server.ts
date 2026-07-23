@@ -85,6 +85,16 @@ function parisDateStr(now: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+function utcMidnightFromDateStr(value: string): number {
+  const [year, month, day] = value.split("-").map((part) => parseInt(part, 10));
+  return Date.UTC(year, month - 1, day);
+}
+
+function parisDaysBetween(fromDateStr: string, to: Date): number {
+  const toDateStr = parisDateStr(to);
+  return Math.round((utcMidnightFromDateStr(toDateStr) - utcMidnightFromDateStr(fromDateStr)) / 86400000);
+}
+
 export interface ProcessOptions {
   overrideHour?: number;
   forceUserId?: string;
@@ -107,7 +117,6 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
   const now = new Date();
   const currentHour = opts.overrideHour ?? parisHour(now);
   const todayStr = parisDateStr(now);
-  const startToday = Date.parse(`${todayStr}T00:00:00+01:00`);
   const dryRun = opts.dryRun === true || typeof opts.dryRunTo === "string";
   const forceSend = opts.forceSend === true;
 
@@ -140,8 +149,8 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
     if (dErr) throw new Error(dErr.message);
 
     for (const d of deadlines ?? []) {
-      const dueMs = new Date(d.due_at).getTime();
-      const daysAway = Math.round((dueMs - startToday) / 86400000);
+      const dueDate = new Date(d.due_at);
+      const daysAway = parisDaysBetween(todayStr, dueDate);
       const rules: number[] = (d.alert_rules as number[] | null) ?? [];
       const alertHour: number = (d.alert_hour as number | null) ?? 9;
       const sent: string[] = (d.alerts_sent as string[] | null) ?? [];
@@ -157,7 +166,7 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
 
       if (!dryRun && sent.includes(combo)) continue;
 
-      const dueDateStr = new Date(d.due_at).toLocaleDateString("fr-FR", {
+      const dueDateStr = dueDate.toLocaleDateString("fr-FR", {
         timeZone: "Europe/Paris",
         day: "2-digit",
         month: "long",
@@ -183,10 +192,11 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
 
         if (!dryRun) {
           const nextSent = [...sent, combo];
-          await supabaseAdmin
+          const { error: updateError } = await supabaseAdmin
             .from("deadlines")
             .update({ alerts_sent: nextSent })
             .eq("id", d.id);
+          if (updateError) throw new Error(updateError.message);
         }
 
         totalSent++;

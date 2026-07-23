@@ -13,6 +13,15 @@ export const Route = createFileRoute("/_authenticated/dashboard/")({
   component: Overview,
 });
 
+const PRIORITY_DOT: Record<string, string> = {
+  low: "bg-brand-green",
+  medium: "bg-brand-yellow",
+  high: "bg-brand-red",
+  green: "bg-brand-green",
+  yellow: "bg-brand-yellow",
+  red: "bg-brand-red",
+};
+
 function Overview() {
   const { data: deadlines = [], isLoading } = useDeadlines();
   const { data: profile } = useProfile();
@@ -91,7 +100,7 @@ function Overview() {
                 ) : priorities.map((p) => (
                   <div key={p.id} className="flex items-center justify-between rounded-xl bg-secondary/60 px-3 py-2.5">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className={`h-2 w-2 rounded-full bg-brand-${p.color}`}/>
+                      <span className={`h-2 w-2 rounded-full ${PRIORITY_DOT[p.priority] ?? PRIORITY_DOT[p.color] ?? "bg-brand-yellow"}`}/>
                       <span className="text-sm font-medium truncate">{p.title}</span>
                     </div>
                     <span className="text-[11px] font-semibold text-muted-foreground">

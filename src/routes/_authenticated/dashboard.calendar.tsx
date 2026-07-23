@@ -12,6 +12,15 @@ export const Route = createFileRoute("/_authenticated/dashboard/calendar")({
   component: CalendarPage,
 });
 
+const PRIORITY_BADGE: Record<string, string> = {
+  low: "bg-brand-green/15 text-brand-green",
+  medium: "bg-brand-yellow/20 text-ink",
+  high: "bg-brand-red/15 text-brand-red",
+  green: "bg-brand-green/15 text-brand-green",
+  yellow: "bg-brand-yellow/20 text-ink",
+  red: "bg-brand-red/15 text-brand-red",
+};
+
 function CalendarPage() {
   const { data: items = [] } = useDeadlines();
   const [month, setMonth] = useState(startOfMonth(new Date()));
@@ -46,7 +55,7 @@ function CalendarPage() {
                 <div className={`text-xs font-semibold ${isToday ? "text-ink" : "text-muted-foreground"}`}>{format(d, "d")}</div>
                 <div className="mt-1 space-y-1">
                   {events.slice(0, 2).map((e) => (
-                    <div key={e.id} className={`text-[10px] px-1.5 py-0.5 rounded bg-brand-${e.color}/15 text-brand-${e.color} truncate`}>{e.title}</div>
+                    <div key={e.id} className={`text-[10px] px-1.5 py-0.5 rounded truncate ${PRIORITY_BADGE[e.priority] ?? PRIORITY_BADGE[e.color] ?? "bg-brand-yellow/20 text-ink"}`}>{e.title}</div>
                   ))}
                   {events.length > 2 && <div className="text-[10px] text-muted-foreground">+{events.length - 2}</div>}
                 </div>

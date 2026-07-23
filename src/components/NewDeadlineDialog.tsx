@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,12 @@ const REMINDER_PRESETS = [
   { v: 1, label: "24h" },
   { v: 0, label: "Le jour J" },
 ];
+
+const PRIORITY_COLOR: Record<string, string> = {
+  low: "green",
+  medium: "yellow",
+  high: "red",
+};
 
 export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -36,9 +42,9 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
     try {
       await create.mutateAsync({
         title: title.trim(),
-        due_at: new Date(dueAt).toISOString(),
+        due_at: new Date(`${dueAt}T12:00:00`).toISOString(),
         priority,
-        color: "blue",
+        color: PRIORITY_COLOR[priority] ?? "yellow",
         alert_rules: alertRules,
         alert_hour: alertHour,
       });
@@ -57,6 +63,9 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
       <DialogContent className="max-w-xl rounded-3xl p-6 md:p-8">
         <DialogHeader className="text-left">
           <DialogTitle className="font-display text-2xl">Nouvelle deadline</DialogTitle>
+          <DialogDescription className="sr-only">
+            Créez une deadline avec une date, une priorité, des rappels et une heure d'envoi.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-5">
           <div className="space-y-1.5">
@@ -65,8 +74,8 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground font-normal">Date & heure</Label>
-              <Input type="datetime-local" value={dueAt} onChange={(e) => setDueAt(e.target.value)} className="h-12 rounded-full px-5"/>
+              <Label className="text-xs text-muted-foreground font-normal">Date</Label>
+              <Input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} className="h-12 rounded-full px-5"/>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground font-normal">Priorité</Label>
