@@ -11,6 +11,16 @@ import { useEffect, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/dashboard/tasks")({
+  head: () => ({
+    meta: [
+      { title: "Deadlines — Deadly" },
+      { name: "description", content: "Liste et gestion de vos deadlines avec priorité, statut et rappels email." },
+      { property: "og:title", content: "Deadlines — Deadly" },
+      { property: "og:description", content: "Créez, filtrez et suivez vos échéances critiques dans Deadly." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Tasks,
 });
 

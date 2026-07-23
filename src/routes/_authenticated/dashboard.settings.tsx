@@ -16,6 +16,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard/settings")({
+  head: () => ({
+    meta: [
+      { title: "Paramètres — Deadly" },
+      { name: "description", content: "Configurez votre profil, vos emails de rappel, vos tests d’envoi et votre abonnement Deadly." },
+      { property: "og:title", content: "Paramètres — Deadly" },
+      { property: "og:description", content: "Gérez les réglages de compte, notifications et abonnement de votre espace Deadly." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: SettingsPage,
 });
 

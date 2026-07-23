@@ -10,6 +10,16 @@ import { formatDistanceToNow, format, subDays, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
+  head: () => ({
+    meta: [
+      { title: "Vue d’ensemble — Deadly" },
+      { name: "description", content: "Résumé de vos deadlines, statuts et échéances prioritaires dans Deadly." },
+      { property: "og:title", content: "Vue d’ensemble — Deadly" },
+      { property: "og:description", content: "Visualisez vos échéances à venir, en retard et respectées dans Deadly." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Overview,
 });
 

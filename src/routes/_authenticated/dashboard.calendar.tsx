@@ -9,6 +9,16 @@ import { Button } from "@/components/ui/button";
 import { NewDeadlineDialog } from "@/components/NewDeadlineDialog";
 
 export const Route = createFileRoute("/_authenticated/dashboard/calendar")({
+  head: () => ({
+    meta: [
+      { title: "Calendrier — Deadly" },
+      { name: "description", content: "Calendrier Deadly de vos renouvellements, domaines, SSL, hébergements et licences." },
+      { property: "og:title", content: "Calendrier — Deadly" },
+      { property: "og:description", content: "Repérez vos échéances par date grâce au calendrier Deadly." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: CalendarPage,
 });
 
