@@ -114,6 +114,7 @@ export type Database = {
           plan: Database["public"]["Enums"]["plan_type"]
           plan_since: string | null
           reminder_email: string | null
+          telegram_chat_id: number | null
           timezone: string | null
           updated_at: string
         }
@@ -126,6 +127,7 @@ export type Database = {
           plan?: Database["public"]["Enums"]["plan_type"]
           plan_since?: string | null
           reminder_email?: string | null
+          telegram_chat_id?: number | null
           timezone?: string | null
           updated_at?: string
         }
@@ -138,8 +140,33 @@ export type Database = {
           plan?: Database["public"]["Enums"]["plan_type"]
           plan_since?: string | null
           reminder_email?: string | null
+          telegram_chat_id?: number | null
           timezone?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      telegram_link_codes: {
+        Row: {
+          chat_id: number
+          code: string
+          created_at: string
+          expires_at: string
+          telegram_username: string | null
+        }
+        Insert: {
+          chat_id: number
+          code: string
+          created_at?: string
+          expires_at?: string
+          telegram_username?: string | null
+        }
+        Update: {
+          chat_id?: number
+          code?: string
+          created_at?: string
+          expires_at?: string
+          telegram_username?: string | null
         }
         Relationships: []
       }
