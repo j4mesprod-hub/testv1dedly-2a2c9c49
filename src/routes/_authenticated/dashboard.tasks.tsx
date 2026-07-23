@@ -1,0 +1,113 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { DashboardShell } from "@/components/DashboardShell";
+import { Button } from "@/components/ui/button";
+import { Plus, Trash2 } from "lucide-react";
+import { useDeadlines, useUpdateDeadlineStatus, useDeleteDeadline, type DeadlineStatus } from "@/hooks/use-deadlines";
+import { NewDeadlineDialog } from "@/components/NewDeadlineDialog";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { formatDistanceToNow, format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { useEffect, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
+
+export const Route = createFileRoute("/_authenticated/dashboard/tasks")({
+  component: Tasks,
+});
+
+const STATUS_LABEL: Record<DeadlineStatus, string> = {
+  upcoming: "À venir",
+  in_progress: "En cours",
+  completed: "Respectée",
+  overdue: "En retard",
+};
+const STATUS_TONE: Record<DeadlineStatus, string> = {
+  upcoming: "bg-brand-blue/15 text-brand-blue",
+  in_progress: "bg-brand-orange/15 text-brand-orange",
+  completed: "bg-brand-green/15 text-brand-green",
+  overdue: "bg-brand-red/15 text-brand-red",
+};
+
+function Tasks() {
+  const { data: items = [] } = useDeadlines();
+  const [filter, setFilter] = useState<"all" | DeadlineStatus>("all");
+  const update = useUpdateDeadlineStatus();
+  const del = useDeleteDeadline();
+
+  const search = useRouterState({ select: (r) => r.location.search as { q?: string } });
+  const [q, setQ] = useState(search?.q ?? "");
+  useEffect(() => { setQ(search?.q ?? ""); }, [search?.q]);
+
+  const filtered = items
+    .filter((i) => filter === "all" ? true : i.status === filter)
+    .filter((i) => !q.trim() ? true : (i.title + " " + (i.category ?? "") + " " + (i.description ?? "")).toLowerCase().includes(q.trim().toLowerCase()));
+
+  return (
+    <DashboardShell
+      title="Deadlines"
+      subtitle="Gérez et faites évoluer le statut de vos échéances."
+      action={
+        <NewDeadlineDialog trigger={
+          <Button className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-5"><Plus className="h-4 w-4 mr-1.5"/>Nouvelle</Button>
+        }/>
+      }
+    >
+      <div className="flex flex-wrap items-center gap-2 mb-6">
+        {(["all", "upcoming", "in_progress", "completed", "overdue"] as const).map((k) => {
+          const count = k === "all" ? items.length : items.filter((i) => i.status === k).length;
+          return (
+            <button
+              key={k}
+              onClick={() => setFilter(k)}
+              className={`h-9 px-4 rounded-full text-sm font-medium border transition ${filter === k ? "bg-ink text-cream border-ink" : "bg-card border-border hover:bg-secondary"}`}
+            >
+              {k === "all" ? "Toutes" : STATUS_LABEL[k]} · {count}
+            </button>
+          );
+        })}
+        {q && (
+          <div className="ml-auto flex items-center gap-2 text-xs bg-secondary rounded-full px-3 h-9">
+            <span>Recherche : <b>{q}</b></span>
+            <button onClick={() => setQ("")} className="text-muted-foreground hover:text-foreground">✕</button>
+          </div>
+        )}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border p-12 text-center text-muted-foreground">
+          {q ? `Aucun résultat pour « ${q} ».` : "Aucune deadline dans cette catégorie."}
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-card border border-border divide-y divide-border">
+          {filtered.map((d) => (
+            <div key={d.id} className="flex items-center gap-4 p-4 animate-fade-in">
+              <div className={`h-2 w-2 rounded-full bg-brand-${d.color}`}/>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <div className="font-semibold truncate">{d.title}</div>
+                  {d.category && <span className="text-[10px] uppercase tracking-widest text-muted-foreground">· {d.category}</span>}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {format(new Date(d.due_at), "d MMM yyyy 'à' HH:mm", { locale: fr })} ·{" "}
+                  {formatDistanceToNow(new Date(d.due_at), { addSuffix: true, locale: fr })}
+                </div>
+              </div>
+              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_TONE[d.status]}`}>{STATUS_LABEL[d.status]}</span>
+              <Select value={d.status} onValueChange={(v) => update.mutate({ id: d.id, status: v as DeadlineStatus })}>
+                <SelectTrigger className="h-9 w-36 rounded-full"><SelectValue/></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="upcoming">À venir</SelectItem>
+                  <SelectItem value="in_progress">En cours</SelectItem>
+                  <SelectItem value="completed">Respectée</SelectItem>
+                  <SelectItem value="overdue">En retard</SelectItem>
+                </SelectContent>
+              </Select>
+              <button onClick={() => del.mutate(d.id)} className="h-9 w-9 rounded-full grid place-items-center text-muted-foreground hover:bg-brand-red/10 hover:text-brand-red">
+                <Trash2 className="h-4 w-4"/>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </DashboardShell>
+  );
+}
