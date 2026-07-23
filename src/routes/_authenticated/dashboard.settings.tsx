@@ -9,7 +9,10 @@ import { Mail, Bell, Slack, Chrome, Github, Check, Trash2, Loader2 } from "lucid
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { useQueryClient } from "@tanstack/react-query";
 import { createProCheckout, syncProAfterCheckout } from "@/lib/stripe.functions";
-import { sendTestReminderEmail } from "@/lib/email.functions";
+import { sendTestReminderEmail, triggerReminderDryRun } from "@/lib/email.functions";
+import { useDeadlines } from "@/hooks/use-deadlines";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/dashboard/settings")({
