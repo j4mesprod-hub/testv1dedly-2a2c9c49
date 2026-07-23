@@ -156,27 +156,133 @@ function NotifTab() {
   };
 
   return (
-    <div className="rounded-2xl bg-card border border-border p-6 space-y-6 max-w-3xl">
-      <div>
-        <h3 className="font-display text-xl font-bold mb-1">Email de rappel</h3>
-        <p className="text-sm text-muted-foreground">Adresse à laquelle Deadly enverra les rappels de vos deadlines.</p>
-      </div>
-      <div className="flex gap-2 items-end">
-        <div className="flex-1 space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Email</Label>
-          <Input type="email" value={email} onChange={(e)=>setEmail(e.target.value)} className="h-11 rounded-xl"/>
+    <div className="space-y-4 max-w-3xl">
+      <div className="rounded-2xl bg-card border border-border p-6 space-y-6">
+        <div>
+          <h3 className="font-display text-xl font-bold mb-1">Email de rappel</h3>
+          <p className="text-sm text-muted-foreground">Adresse à laquelle Deadly enverra les rappels de vos deadlines.</p>
         </div>
-        <Button className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-5" onClick={save} disabled={update.isPending}>Enregistrer</Button>
-        <Button variant="outline" className="rounded-full h-11 px-5" onClick={sendTest} disabled={testing}>
-          {testing ? "Envoi…" : "Envoyer un test"}
+        <div className="flex gap-2 items-end">
+          <div className="flex-1 space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Email</Label>
+            <Input type="email" value={email} onChange={(e)=>setEmail(e.target.value)} className="h-11 rounded-xl"/>
+          </div>
+          <Button className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-5" onClick={save} disabled={update.isPending}>Enregistrer</Button>
+          <Button variant="outline" className="rounded-full h-11 px-5" onClick={sendTest} disabled={testing}>
+            {testing ? "Envoi…" : "Envoyer un test"}
+          </Button>
+        </div>
+        <div className="border-t border-border pt-6 space-y-4">
+          <h4 className="font-display font-bold">Canaux</h4>
+          <NotifRow icon={<Mail/>} title="Email" desc="Rappels à l'adresse ci-dessus" checked={enableEmail} onChange={setEnableEmail}/>
+          <NotifRow icon={<Bell/>} title="Notifications dans l'app" desc="Cloche en haut à droite" checked={enableInApp} onChange={setEnableInApp}/>
+        </div>
+        <p className="text-xs text-muted-foreground pt-4 border-t border-border">Les horaires de rappel (J-30, J-7, J-1…) se choisissent au moment de la création de chaque deadline.</p>
+      </div>
+      <DryRunCard defaultEmail={profile?.reminder_email ?? ""}/>
+    </div>
+  );
+}
+
+function DryRunCard({ defaultEmail }: { defaultEmail: string }) {
+  const { data: deadlines } = useDeadlines();
+  const nowParisHour = () => {
+    const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", hour12: false }).formatToParts(new Date());
+    return parseInt(parts.find((p) => p.type === "hour")?.value ?? "9", 10) % 24;
+  };
+  const [testEmail, setTestEmail] = useState(defaultEmail);
+  const [deadlineId, setDeadlineId] = useState<string>("all");
+  const [overrideHour, setOverrideHour] = useState<number>(nowParisHour());
+  const [forceSend, setForceSend] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [last, setLast] = useState<{ sent: number; to: string } | null>(null);
+
+  useEffect(() => { if (defaultEmail && !testEmail) setTestEmail(defaultEmail); }, [defaultEmail, testEmail]);
+
+  const activeDeadlines = (deadlines ?? []).filter((d) => d.status !== "completed");
+
+  const run = async () => {
+    if (!testEmail.includes("@")) { toast.error("Adresse de test invalide"); return; }
+    setBusy(true);
+    try {
+      const r = await triggerReminderDryRun({
+        data: {
+          testEmail,
+          deadlineId: deadlineId === "all" ? undefined : deadlineId,
+          overrideHour,
+          forceSend,
+        },
+      });
+      setLast({ sent: r.sent, to: testEmail });
+      if (r.sent === 0) {
+        toast.info("Aucun email envoyé", {
+          description: "Aucun rappel ne correspond aux critères. Coche « Forcer l'envoi » pour ignorer les filtres.",
+        });
+      } else {
+        toast.success(`${r.sent} email${r.sent > 1 ? "s" : ""} envoyé${r.sent > 1 ? "s" : ""}`, { description: `À ${testEmail}` });
+      }
+    } catch (e) {
+      toast.error("Test impossible", { description: e instanceof Error ? e.message : "" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-2xl bg-card border border-border p-6 space-y-4">
+      <div>
+        <h3 className="font-display text-xl font-bold mb-1">Tester l'envoi des rappels</h3>
+        <p className="text-sm text-muted-foreground">
+          Déclenche un envoi simulé (dryRun) sur une adresse de test. La déduplication n'est pas modifiée : le vrai
+          déclenchement horaire enverra l'email comme prévu.
+        </p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <div className="space-y-1.5 md:col-span-2">
+          <Label className="text-xs font-medium text-muted-foreground">Adresse de test</Label>
+          <Input type="email" value={testEmail} onChange={(e)=>setTestEmail(e.target.value)} placeholder="vous@exemple.com" className="h-11 rounded-xl"/>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-muted-foreground">Rappel à simuler</Label>
+          <Select value={deadlineId} onValueChange={setDeadlineId}>
+            <SelectTrigger className="h-11 rounded-xl"><SelectValue/></SelectTrigger>
+            <SelectContent className="max-h-64">
+              <SelectItem value="all">Tous mes rappels</SelectItem>
+              {activeDeadlines.map((d) => (
+                <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-muted-foreground">Heure simulée (Paris)</Label>
+          <Select value={String(overrideHour)} onValueChange={(v) => setOverrideHour(parseInt(v, 10))}>
+            <SelectTrigger className="h-11 rounded-xl"><SelectValue/></SelectTrigger>
+            <SelectContent className="max-h-64">
+              {Array.from({ length: 24 }, (_, i) => (
+                <SelectItem key={i} value={String(i)}>{String(i).padStart(2, "0")}:00</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <label className="flex items-start gap-3 text-sm cursor-pointer">
+        <Checkbox checked={forceSend} onCheckedChange={(v) => setForceSend(v === true)} className="mt-0.5"/>
+        <span>
+          <span className="font-medium">Forcer l'envoi</span>
+          <span className="block text-xs text-muted-foreground">Ignore les filtres <code>alert_rules</code> et <code>alert_hour</code> pour envoyer un exemple immédiatement.</span>
+        </span>
+      </label>
+      <div className="flex items-center gap-3 pt-1">
+        <Button onClick={run} disabled={busy} className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-5">
+          {busy ? "Envoi…" : "Envoyer un test"}
         </Button>
+        {last && (
+          <span className="text-xs text-muted-foreground">
+            Dernier essai : {last.sent} email{last.sent > 1 ? "s" : ""} → {last.to}
+          </span>
+        )}
       </div>
-      <div className="border-t border-border pt-6 space-y-4">
-        <h4 className="font-display font-bold">Canaux</h4>
-        <NotifRow icon={<Mail/>} title="Email" desc="Rappels à l'adresse ci-dessus" checked={enableEmail} onChange={setEnableEmail}/>
-        <NotifRow icon={<Bell/>} title="Notifications dans l'app" desc="Cloche en haut à droite" checked={enableInApp} onChange={setEnableInApp}/>
-      </div>
-      <p className="text-xs text-muted-foreground pt-4 border-t border-border">Les horaires de rappel (J-30, J-7, J-1…) se choisissent au moment de la création de chaque deadline.</p>
     </div>
   );
 }
