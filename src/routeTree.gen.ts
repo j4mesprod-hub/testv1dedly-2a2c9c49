@@ -19,6 +19,7 @@ import { Route as AuthenticatedDashboardTasksRouteImport } from './routes/_authe
 import { Route as AuthenticatedDashboardStatsRouteImport } from './routes/_authenticated/dashboard.stats'
 import { Route as AuthenticatedDashboardSettingsRouteImport } from './routes/_authenticated/dashboard.settings'
 import { Route as AuthenticatedDashboardCalendarRouteImport } from './routes/_authenticated/dashboard.calendar'
+import { Route as ApiPublicHooksTelegramRouteImport } from './routes/api/public/hooks/telegram'
 import { Route as ApiPublicHooksRemindersRouteImport } from './routes/api/public/hooks/reminders'
 
 const AuthRoute = AuthRouteImport.update({
@@ -75,6 +76,11 @@ const AuthenticatedDashboardCalendarRoute =
     path: '/calendar',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const ApiPublicHooksTelegramRoute = ApiPublicHooksTelegramRouteImport.update({
+  id: '/api/public/hooks/telegram',
+  path: '/api/public/hooks/telegram',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksRemindersRoute = ApiPublicHooksRemindersRouteImport.update({
   id: '/api/public/hooks/reminders',
   path: '/api/public/hooks/reminders',
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/tasks': typeof AuthenticatedDashboardTasksRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/api/public/hooks/reminders': typeof ApiPublicHooksRemindersRoute
+  '/api/public/hooks/telegram': typeof ApiPublicHooksTelegramRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/dashboard/tasks': typeof AuthenticatedDashboardTasksRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/api/public/hooks/reminders': typeof ApiPublicHooksRemindersRoute
+  '/api/public/hooks/telegram': typeof ApiPublicHooksTelegramRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/tasks': typeof AuthenticatedDashboardTasksRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/api/public/hooks/reminders': typeof ApiPublicHooksRemindersRoute
+  '/api/public/hooks/telegram': typeof ApiPublicHooksTelegramRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/dashboard/tasks'
     | '/dashboard/'
     | '/api/public/hooks/reminders'
+    | '/api/public/hooks/telegram'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/dashboard/tasks'
     | '/dashboard'
     | '/api/public/hooks/reminders'
+    | '/api/public/hooks/telegram'
   id:
     | '__root__'
     | '/'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/tasks'
     | '/_authenticated/dashboard/'
     | '/api/public/hooks/reminders'
+    | '/api/public/hooks/telegram'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -162,6 +174,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRouteWithChildren
   ApiPublicHooksRemindersRoute: typeof ApiPublicHooksRemindersRoute
+  ApiPublicHooksTelegramRoute: typeof ApiPublicHooksTelegramRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -236,6 +249,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardCalendarRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/api/public/hooks/telegram': {
+      id: '/api/public/hooks/telegram'
+      path: '/api/public/hooks/telegram'
+      fullPath: '/api/public/hooks/telegram'
+      preLoaderRoute: typeof ApiPublicHooksTelegramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/reminders': {
       id: '/api/public/hooks/reminders'
       path: '/api/public/hooks/reminders'
@@ -294,6 +314,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRouteWithChildren,
   ApiPublicHooksRemindersRoute: ApiPublicHooksRemindersRoute,
+  ApiPublicHooksTelegramRoute: ApiPublicHooksTelegramRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
