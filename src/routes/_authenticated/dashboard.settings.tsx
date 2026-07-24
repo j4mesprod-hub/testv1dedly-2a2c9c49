@@ -149,99 +149,146 @@ function ProfileTab() {
 
 function NotifTab() {
   const { data: profile } = useProfile();
-  const update = useUpdateProfile();
-  const [email, setEmail] = useState("");
-  const [enableEmail, setEnableEmail] = useState(true);
-  const [enableInApp, setEnableInApp] = useState(true);
+  const qc = useQueryClient();
+  const linked = !!profile?.telegram_chat_id;
 
-  useEffect(() => {
-    if (profile?.reminder_email) setEmail(profile.reminder_email);
-  }, [profile]);
+  const { data: botInfo } = useQuery({
+    queryKey: ["telegram-bot-username"],
+    queryFn: () => getTelegramBotUsername(),
+    staleTime: Infinity,
+  });
+  const botUsername = botInfo?.username ?? "";
+  const botUrl = botUsername ? `https://t.me/${botUsername}` : "";
 
-  const save = async () => {
-    if (!email.includes("@")) { toast.error("Email invalide"); return; }
-    await update.mutateAsync({ reminder_email: email });
-    toast.success("Email de rappel mis à jour");
+  const [code, setCode] = useState("");
+  const [linking, setLinking] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
+
+  const link = async () => {
+    if (!code.trim()) { toast.error("Collez le code reçu dans Telegram"); return; }
+    setLinking(true);
+    try {
+      await linkTelegramAccount({ data: { code: code.trim() } });
+      toast.success("Compte Telegram lié 🎉");
+      setCode("");
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    } catch (e) {
+      toast.error("Liaison impossible", { description: e instanceof Error ? e.message : "" });
+    } finally { setLinking(false); }
   };
 
-  const [testing, setTesting] = useState(false);
+  const unlink = async () => {
+    setUnlinking(true);
+    try {
+      await unlinkTelegramAccount();
+      toast.success("Compte Telegram délié");
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    } catch (e) {
+      toast.error("Erreur", { description: e instanceof Error ? e.message : "" });
+    } finally { setUnlinking(false); }
+  };
+
   const sendTest = async () => {
     setTesting(true);
     try {
-      const r = await sendTestReminderEmail();
-      toast.success("Email envoyé", { description: `À ${r.to}` });
+      await sendTestTelegramMessage();
+      toast.success("Message Telegram envoyé");
     } catch (e) {
       toast.error("Envoi impossible", { description: e instanceof Error ? e.message : "" });
-    } finally {
-      setTesting(false);
-    }
+    } finally { setTesting(false); }
   };
 
   return (
     <div className="space-y-4 max-w-3xl">
       <div className="rounded-2xl bg-card border border-border p-6 space-y-6">
         <div>
-          <h3 className="font-display text-xl font-bold mb-1">Email de rappel</h3>
-          <p className="text-sm text-muted-foreground">Adresse à laquelle Deadly enverra les rappels de vos deadlines.</p>
+          <h3 className="font-display text-xl font-bold mb-1 flex items-center gap-2"><Send className="h-5 w-5"/>Rappels via Telegram</h3>
+          <p className="text-sm text-muted-foreground">Deadly vous envoie vos rappels directement dans Telegram.</p>
         </div>
-        <div className="flex gap-2 items-end">
-          <div className="flex-1 space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Email</Label>
-            <Input type="email" value={email} onChange={(e)=>setEmail(e.target.value)} className="h-11 rounded-xl"/>
+
+        {linked ? (
+          <div className="space-y-4">
+            <div className="rounded-xl bg-brand-green/10 border border-brand-green/30 px-4 py-3 flex items-center gap-3">
+              <Check className="h-5 w-5 text-brand-green"/>
+              <div className="text-sm">
+                <div className="font-semibold">Compte Telegram lié</div>
+                <div className="text-muted-foreground text-xs">Chat ID : {profile?.telegram_chat_id}</div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" className="rounded-full h-11 px-5" onClick={sendTest} disabled={testing}>
+                {testing ? "Envoi…" : "Envoyer un message test"}
+              </Button>
+              <Button variant="outline" className="rounded-full h-11 px-5 border-brand-red/40 text-brand-red hover:bg-brand-red/10" onClick={unlink} disabled={unlinking}>
+                {unlinking ? "…" : "Délier"}
+              </Button>
+            </div>
           </div>
-          <Button className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-5" onClick={save} disabled={update.isPending}>Enregistrer</Button>
-          <Button variant="outline" className="rounded-full h-11 px-5" onClick={sendTest} disabled={testing}>
-            {testing ? "Envoi…" : "Envoyer un test"}
-          </Button>
-        </div>
-        <div className="border-t border-border pt-6 space-y-4">
-          <h4 className="font-display font-bold">Canaux</h4>
-          <NotifRow icon={<Mail/>} title="Email" desc="Rappels à l'adresse ci-dessus" checked={enableEmail} onChange={setEnableEmail}/>
-          <NotifRow icon={<Bell/>} title="Notifications dans l'app" desc="Cloche en haut à droite" checked={enableInApp} onChange={setEnableInApp}/>
-        </div>
+        ) : (
+          <div className="space-y-4">
+            <ol className="space-y-2 text-sm text-muted-foreground list-decimal pl-5">
+              <li>
+                Ouvrez Telegram, cherchez{" "}
+                {botUrl ? (
+                  <a href={botUrl} target="_blank" rel="noreferrer" className="font-semibold text-foreground underline underline-offset-2">@{botUsername}</a>
+                ) : (
+                  <span className="font-semibold text-foreground">le bot Deadly</span>
+                )}.
+              </li>
+              <li>Cliquez sur <span className="font-semibold text-foreground">Démarrer</span> (ou envoyez <code>/start</code>).</li>
+              <li>Copiez le code que le bot vous renvoie et collez-le ci-dessous.</li>
+            </ol>
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
+              <div className="flex-1 space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Code de liaison</Label>
+                <Input value={code} onChange={(e)=>setCode(e.target.value.toUpperCase())} placeholder="ABC123" className="h-11 rounded-xl font-mono tracking-widest uppercase"/>
+              </div>
+              <Button className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-5" onClick={link} disabled={linking}>
+                {linking ? "Liaison…" : "Lier mon compte"}
+              </Button>
+            </div>
+          </div>
+        )}
+
         <p className="text-xs text-muted-foreground pt-4 border-t border-border">Les horaires de rappel (J-30, J-7, J-1…) se choisissent au moment de la création de chaque deadline.</p>
       </div>
-      <DryRunCard defaultEmail={profile?.reminder_email ?? ""}/>
+      {linked && <DryRunCard/>}
     </div>
   );
 }
 
-function DryRunCard({ defaultEmail }: { defaultEmail: string }) {
+function DryRunCard() {
   const { data: deadlines } = useDeadlines();
   const nowParisHour = () => {
     const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", hour12: false }).formatToParts(new Date());
     return parseInt(parts.find((p) => p.type === "hour")?.value ?? "9", 10) % 24;
   };
-  const [testEmail, setTestEmail] = useState(defaultEmail);
   const [deadlineId, setDeadlineId] = useState<string>("all");
   const [overrideHour, setOverrideHour] = useState<number>(nowParisHour());
   const [forceSend, setForceSend] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [last, setLast] = useState<{ sent: number; to: string } | null>(null);
-
-  useEffect(() => { if (defaultEmail && !testEmail) setTestEmail(defaultEmail); }, [defaultEmail, testEmail]);
+  const [last, setLast] = useState<number | null>(null);
 
   const activeDeadlines = (deadlines ?? []).filter((d) => d.status !== "completed");
 
   const run = async () => {
-    if (!testEmail.includes("@")) { toast.error("Adresse de test invalide"); return; }
     setBusy(true);
     try {
       const r = await triggerReminderDryRun({
         data: {
-          testEmail,
           deadlineId: deadlineId === "all" ? undefined : deadlineId,
           overrideHour,
           forceSend,
         },
       });
-      setLast({ sent: r.sent, to: testEmail });
+      setLast(r.sent);
       if (r.sent === 0) {
-        toast.info("Aucun email envoyé", {
+        toast.info("Aucun message envoyé", {
           description: "Aucun rappel ne correspond aux critères. Coche « Forcer l'envoi » pour ignorer les filtres.",
         });
       } else {
-        toast.success(`${r.sent} email${r.sent > 1 ? "s" : ""} envoyé${r.sent > 1 ? "s" : ""}`, { description: `À ${testEmail}` });
+        toast.success(`${r.sent} message${r.sent > 1 ? "s" : ""} Telegram envoyé${r.sent > 1 ? "s" : ""}`);
       }
     } catch (e) {
       toast.error("Test impossible", { description: e instanceof Error ? e.message : "" });
@@ -255,15 +302,11 @@ function DryRunCard({ defaultEmail }: { defaultEmail: string }) {
       <div>
         <h3 className="font-display text-xl font-bold mb-1">Tester l'envoi des rappels</h3>
         <p className="text-sm text-muted-foreground">
-          Déclenche un envoi simulé (dryRun) sur une adresse de test. La déduplication n'est pas modifiée : le vrai
-          déclenchement horaire enverra l'email comme prévu.
+          Déclenche un envoi simulé sur votre Telegram. La déduplication n'est pas modifiée : le vrai
+          déclenchement horaire enverra le rappel comme prévu.
         </p>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
-        <div className="space-y-1.5 md:col-span-2">
-          <Label className="text-xs font-medium text-muted-foreground">Adresse de test</Label>
-          <Input type="email" value={testEmail} onChange={(e)=>setTestEmail(e.target.value)} placeholder="vous@exemple.com" className="h-11 rounded-xl"/>
-        </div>
         <div className="space-y-1.5">
           <Label className="text-xs font-medium text-muted-foreground">Rappel à simuler</Label>
           <Select value={deadlineId} onValueChange={setDeadlineId}>
@@ -299,9 +342,9 @@ function DryRunCard({ defaultEmail }: { defaultEmail: string }) {
         <Button onClick={run} disabled={busy} className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-5">
           {busy ? "Envoi…" : "Envoyer un test"}
         </Button>
-        {last && (
+        {last !== null && (
           <span className="text-xs text-muted-foreground">
-            Dernier essai : {last.sent} email{last.sent > 1 ? "s" : ""} → {last.to}
+            Dernier essai : {last} message{last > 1 ? "s" : ""} envoyé{last > 1 ? "s" : ""}
           </span>
         )}
       </div>
@@ -309,20 +352,6 @@ function DryRunCard({ defaultEmail }: { defaultEmail: string }) {
   );
 }
 
-function NotifRow({ icon, title, desc, checked, onChange }: { icon: React.ReactNode; title: string; desc: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between rounded-xl bg-secondary/50 px-4 py-3">
-      <div className="flex items-center gap-3">
-        <div className="h-9 w-9 rounded-lg bg-background grid place-items-center">{icon}</div>
-        <div>
-          <div className="text-sm font-semibold">{title}</div>
-          <div className="text-xs text-muted-foreground">{desc}</div>
-        </div>
-      </div>
-      <Switch checked={checked} onCheckedChange={onChange}/>
-    </div>
-  );
-}
 
 function IntegrationsTab() {
   const items = [
