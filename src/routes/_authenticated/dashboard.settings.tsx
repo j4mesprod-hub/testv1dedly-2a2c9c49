@@ -1,15 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
-import { Mail, Bell, Slack, Chrome, Github, Check, Trash2, Loader2 } from "lucide-react";
+import { Mail, Bell, Slack, Chrome, Github, Check, Trash2, Loader2, Send } from "lucide-react";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createProCheckout, syncProAfterCheckout } from "@/lib/stripe.functions";
-import { sendTestReminderEmail, triggerReminderDryRun } from "@/lib/email.functions";
+import {
+  getTelegramBotUsername,
+  sendTestTelegramMessage,
+  linkTelegramAccount,
+  unlinkTelegramAccount,
+  triggerReminderDryRun,
+} from "@/lib/telegram.functions";
 import { useDeadlines } from "@/hooks/use-deadlines";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
