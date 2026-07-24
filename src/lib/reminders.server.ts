@@ -1,6 +1,6 @@
-const BREVO_URL = "https://api.brevo.com/v3/smtp/email";
+const TELEGRAM_API_BASE = "https://api.telegram.org";
 
-function reminderHtml(opts: {
+function reminderText(opts: {
   clientName: string;
   title: string;
   category: string | null;
@@ -11,56 +11,35 @@ function reminderHtml(opts: {
     opts.daysAway === 0
       ? "aujourd'hui"
       : `dans ${opts.daysAway} jour${opts.daysAway > 1 ? "s" : ""}`;
-  return `
-  <div style="font-family:Inter,Arial,sans-serif;background:#fcfbf8;padding:32px">
-    <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:20px;padding:32px;border:1px solid #eee">
-      <div style="font-weight:800;font-size:22px;color:#111;letter-spacing:-0.02em">Deadly</div>
-      <h1 style="font-size:22px;margin:20px 0 8px;color:#111;letter-spacing:-0.02em">⚠️ Action requise</h1>
-      <p style="color:#555;line-height:1.55;font-size:15px">
-        Votre échéance <strong>${opts.title}</strong>${opts.category ? ` (${opts.category})` : ""}
-        pour le client <strong>${opts.clientName}</strong> expire ${when}.
-      </p>
-      <div style="margin:20px 0;padding:16px 18px;border-radius:14px;background:#f6f5f0">
-        <div style="font-weight:700;color:#111;font-size:16px">${opts.title}</div>
-        <div style="color:#555;font-size:13px;margin-top:4px">Client&nbsp;: ${opts.clientName}</div>
-        <div style="color:#888;font-size:13px;margin-top:2px">Date d'expiration exacte&nbsp;: ${opts.dueDateStr}</div>
-      </div>
-      <p style="color:#666;font-size:13px">Connectez-vous à Deadly pour renouveler ou marquer ce rappel comme traité.</p>
-      <p style="color:#aaa;font-size:12px;margin-top:24px">— L'équipe Deadly</p>
-    </div>
-  </div>`;
+  const catLine = opts.category ? `\nCatégorie : ${opts.category}` : "";
+  return (
+    `⚠️ *ACTION REQUISE*\n\n` +
+    `*${opts.title}* expire ${when}.\n` +
+    `Client : ${opts.clientName}${catLine}\n` +
+    `Date d'expiration : ${opts.dueDateStr}\n` +
+    `Jours restants : ${opts.daysAway}`
+  );
 }
 
-async function sendBrevoEmail(payload: {
-  to: string;
-  toName: string;
-  subject: string;
-  html: string;
-}) {
-  const key = process.env.BREVO_API_KEY;
-  const sender = process.env.SENDER_EMAIL;
-  if (!key) throw new Error("BREVO_API_KEY missing");
-  if (!sender) throw new Error("SENDER_EMAIL missing");
-
-  const res = await fetch(BREVO_URL, {
+async function sendTelegram(chatId: number | string, text: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) throw new Error("TELEGRAM_BOT_TOKEN missing");
+  const res = await fetch(`${TELEGRAM_API_BASE}/bot${token}/sendMessage`, {
     method: "POST",
-    headers: {
-      accept: "application/json",
-      "content-type": "application/json",
-      "api-key": key,
-    },
+    headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      sender: { email: sender, name: "Deadly" },
-      to: [{ email: payload.to, name: payload.toName || undefined }],
-      subject: payload.subject,
-      htmlContent: payload.html,
+      chat_id: chatId,
+      text,
+      parse_mode: "Markdown",
+      disable_web_page_preview: true,
     }),
   });
-
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Brevo ${res.status}: ${text}`);
+    const t = await res.text();
+    throw new Error(`Telegram ${res.status}: ${t}`);
   }
+  const json = (await res.json()) as { ok: boolean; description?: string };
+  if (!json.ok) throw new Error(`Telegram: ${json.description ?? "unknown"}`);
 }
 
 function parisHour(now: Date): number {
@@ -92,13 +71,16 @@ function utcMidnightFromDateStr(value: string): number {
 
 function parisDaysBetween(fromDateStr: string, to: Date): number {
   const toDateStr = parisDateStr(to);
-  return Math.round((utcMidnightFromDateStr(toDateStr) - utcMidnightFromDateStr(fromDateStr)) / 86400000);
+  return Math.round(
+    (utcMidnightFromDateStr(toDateStr) - utcMidnightFromDateStr(fromDateStr)) / 86400000,
+  );
 }
 
 export interface ProcessOptions {
   overrideHour?: number;
   forceUserId?: string;
-  dryRunTo?: string;
+  /** Override recipient chat_id (test mode). */
+  dryRunChatId?: number | string;
   dryRun?: boolean;
   forceSend?: boolean;
   deadlineId?: string;
@@ -106,7 +88,7 @@ export interface ProcessOptions {
 
 export interface ProcessResult {
   totalSent: number;
-  details: Array<{ deadlineId: string; combo: string; to: string }>;
+  details: Array<{ deadlineId: string; combo: string; chatId: string }>;
   currentHour: number;
   todayStr: string;
   dryRun: boolean;
@@ -117,26 +99,29 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
   const now = new Date();
   const currentHour = opts.overrideHour ?? parisHour(now);
   const todayStr = parisDateStr(now);
-  const dryRun = opts.dryRun === true || typeof opts.dryRunTo === "string";
+  const dryRun = opts.dryRun === true || opts.dryRunChatId !== undefined;
   const forceSend = opts.forceSend === true;
 
-  const { data: profiles, error: pErr } = await supabaseAdmin
-    .from("profiles")
-    .select("id, display_name, reminder_email")
-    .eq("has_active_sub", true)
-    .not("reminder_email", "is", null);
-  if (pErr) throw new Error(pErr.message);
+  console.log(
+    `[reminders] serverUTC=${now.toISOString()} parisHour=${currentHour} parisDate=${todayStr} dryRun=${dryRun} forceSend=${forceSend}`,
+  );
 
-  const scope = opts.forceUserId
-    ? (profiles ?? []).filter((p) => p.id === opts.forceUserId)
-    : (profiles ?? []);
+  let profilesQuery = supabaseAdmin
+    .from("profiles")
+    .select("id, display_name, telegram_chat_id")
+    .eq("has_active_sub", true)
+    .not("telegram_chat_id", "is", null);
+  if (opts.forceUserId) profilesQuery = profilesQuery.eq("id", opts.forceUserId);
+
+  const { data: profiles, error: pErr } = await profilesQuery;
+  if (pErr) throw new Error(pErr.message);
 
   let totalSent = 0;
   const details: ProcessResult["details"] = [];
 
-  for (const profile of scope) {
-    const to = opts.dryRunTo ?? profile.reminder_email;
-    if (!to) continue;
+  for (const profile of profiles ?? []) {
+    const chatId = opts.dryRunChatId ?? profile.telegram_chat_id;
+    if (chatId === null || chatId === undefined) continue;
 
     let query = supabaseAdmin
       .from("deadlines")
@@ -160,9 +145,8 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
         if (currentHour !== alertHour) continue;
       }
 
-      const effectiveDays = forceSend && !rules.includes(daysAway) ? daysAway : daysAway;
       const effectiveHour = forceSend ? currentHour : alertHour;
-      const combo = `${effectiveDays}-${effectiveHour}`;
+      const combo = `${daysAway}-${effectiveHour}`;
 
       if (!dryRun && sent.includes(combo)) continue;
 
@@ -174,21 +158,17 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
       });
       const clientName = d.client_name ?? "—";
 
-      const subject = `⚠️ ACTION REQUISE : ${d.title} expire dans ${effectiveDays} jour${effectiveDays > 1 ? "s" : ""} (Client: ${clientName})`;
-
       try {
-        await sendBrevoEmail({
-          to,
-          toName: profile.display_name ?? "",
-          subject,
-          html: reminderHtml({
+        await sendTelegram(
+          chatId,
+          reminderText({
             clientName,
             title: d.title,
             category: d.category,
             dueDateStr,
-            daysAway: effectiveDays,
+            daysAway,
           }),
-        });
+        );
 
         if (!dryRun) {
           const nextSent = [...sent, combo];
@@ -200,7 +180,7 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
         }
 
         totalSent++;
-        details.push({ deadlineId: d.id, combo, to });
+        details.push({ deadlineId: d.id, combo, chatId: String(chatId) });
       } catch (err) {
         console.error(`[reminders] send failed for deadline ${d.id}`, err);
       }
