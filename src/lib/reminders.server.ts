@@ -60,7 +60,7 @@ export function parisMinute(now: Date): number {
   return parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
 }
 
-function parisDateStr(now: Date): string {
+export function parisDateStr(now: Date): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Paris",
     year: "numeric",
@@ -78,7 +78,7 @@ function utcMidnightFromDateStr(value: string): number {
   return Date.UTC(year, month - 1, day);
 }
 
-function parisDaysBetween(fromDateStr: string, to: Date): number {
+export function parisDaysBetween(fromDateStr: string, to: Date): number {
   const toDateStr = parisDateStr(to);
   return Math.round(
     (utcMidnightFromDateStr(toDateStr) - utcMidnightFromDateStr(fromDateStr)) / 86400000,
