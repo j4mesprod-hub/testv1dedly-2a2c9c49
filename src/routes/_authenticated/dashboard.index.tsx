@@ -1,7 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Button } from "@/components/ui/button";
-import { Plus, AlertTriangle, CheckCircle2, Clock, Calendar as CalIcon, Sparkles } from "lucide-react";
+import { Plus, AlertTriangle, CheckCircle2, Clock, Calendar as CalIcon, Sparkles, Send } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
+import { sendDailySummaryNow } from "@/lib/telegram.functions";
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, CartesianGrid } from "recharts";
 import { useDeadlines } from "@/hooks/use-deadlines";
 import { useProfile } from "@/hooks/use-profile";
@@ -35,6 +39,8 @@ const PRIORITY_DOT: Record<string, string> = {
 function Overview() {
   const { data: deadlines = [], isLoading } = useDeadlines();
   const { data: profile } = useProfile();
+  const { t } = useT();
+  const [summaryBusy, setSummaryBusy] = useState(false);
   const firstName = (profile?.display_name ?? "").split(" ")[0];
 
   const upcoming = deadlines.filter((d) => d.status === "upcoming").length;
