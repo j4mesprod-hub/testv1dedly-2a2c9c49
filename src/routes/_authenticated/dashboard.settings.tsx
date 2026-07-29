@@ -128,6 +128,16 @@ function ProfileTab() {
             <Input value={profile?.reminder_email ?? ""} disabled className="h-10 rounded-xl"/>
           </div>
           <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Langue / Language</Label>
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger className="h-10 rounded-xl"><SelectValue/></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="fr">Français</SelectItem>
+                <SelectItem value="en">English</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Fuseau horaire</Label>
             <Input value={timezone} onChange={(e)=>setTimezone(e.target.value)} className="h-10 rounded-xl"/>
           </div>
