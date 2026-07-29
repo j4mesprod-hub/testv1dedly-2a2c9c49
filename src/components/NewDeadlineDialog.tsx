@@ -90,33 +90,20 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 sm:items-end">
-            <div className="space-y-2 min-w-0">
-              <Label className="text-xs text-muted-foreground font-normal">Rappels</Label>
-              <div className="flex flex-wrap gap-2">
-                {REMINDER_PRESETS.map((p) => {
-                  const active = alertRules.includes(p.v);
-                  return (
-                    <button
-                      type="button"
-                      key={p.v}
-                      onClick={() => toggle(p.v)}
-                      className={`px-3 h-9 rounded-full text-xs font-semibold border transition ${active ? "bg-ink text-cream border-ink" : "bg-background border-border text-foreground hover:bg-secondary"}`}
-                    >{p.label}</button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground font-normal">Heure d'envoi</Label>
-              <Select value={String(alertHour)} onValueChange={(v) => setAlertHour(parseInt(v, 10))}>
-                <SelectTrigger className="h-9 rounded-full px-4 w-full sm:w-[110px]"><SelectValue/></SelectTrigger>
-                <SelectContent className="max-h-64">
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <SelectItem key={i} value={String(i)}>{String(i).padStart(2, "0")}:00</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-2 min-w-0">
+            <Label className="text-xs text-muted-foreground font-normal">Rappels</Label>
+            <div className="flex flex-wrap gap-2">
+              {REMINDER_PRESETS.map((p) => {
+                const active = alertRules.includes(p.v);
+                return (
+                  <button
+                    type="button"
+                    key={p.v}
+                    onClick={() => toggle(p.v)}
+                    className={`px-3 h-9 rounded-full text-xs font-semibold border transition ${active ? "bg-ink text-cream border-ink" : "bg-background border-border text-foreground hover:bg-secondary"}`}
+                  >{p.label}</button>
+                );
+              })}
             </div>
           </div>
         </div>
