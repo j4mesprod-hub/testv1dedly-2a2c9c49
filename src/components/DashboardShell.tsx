@@ -10,10 +10,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const nav = [
-  { to: "/dashboard", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
-  { to: "/dashboard/calendar", label: "Calendrier", icon: Calendar },
-  { to: "/dashboard/tasks", label: "Deadlines", icon: ListChecks },
-  { to: "/dashboard/stats", label: "Statistiques", icon: BarChart3 },
+  { to: "/dashboard", key: "nav.overview" as const, icon: LayoutDashboard, exact: true },
+  { to: "/dashboard/calendar", key: "nav.calendar" as const, icon: Calendar },
+  { to: "/dashboard/tasks", key: "nav.deadlines" as const, icon: ListChecks },
+  { to: "/dashboard/stats", key: "nav.stats" as const, icon: BarChart3 },
 ];
 
 function initials(name?: string | null, email?: string | null) {
@@ -132,7 +132,7 @@ export function DashboardShell({ children, title, subtitle, action }: { children
             ))}
           </div>
           <div className="flex w-full flex-col items-center gap-2">
-            <NavIcon to="/dashboard/settings" label="Paramètres" icon={Settings} active={isActive("/dashboard/settings")} expanded={sidebarExpanded} />
+            <NavIcon to="/dashboard/settings" label={t("nav.settings")} icon={Settings} active={isActive("/dashboard/settings")} expanded={sidebarExpanded} />
           </div>
         </aside>
 
@@ -145,7 +145,7 @@ export function DashboardShell({ children, title, subtitle, action }: { children
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Rechercher…"
+                  placeholder={t("common.search")}
                   className="w-full h-10 rounded-full bg-secondary pl-10 pr-4 text-sm outline-none border border-transparent focus:border-ink/20"
                 />
               </form>
@@ -168,7 +168,7 @@ export function DashboardShell({ children, title, subtitle, action }: { children
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>
-                      <div className="text-sm font-semibold truncate">{profile?.display_name ?? "Utilisateur"}</div>
+                      <div className="text-sm font-semibold truncate">{profile?.display_name ?? t("common.user")}</div>
                       <div className="text-xs text-muted-foreground font-normal truncate">{profile?.reminder_email}</div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator/>
@@ -178,10 +178,10 @@ export function DashboardShell({ children, title, subtitle, action }: { children
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem onClick={() => navigate({ to: "/dashboard/settings" })}>
-                      <Settings className="h-4 w-4 mr-2"/> Paramètres
+                      <Settings className="h-4 w-4 mr-2"/> {t("nav.settings")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={signOut} className="text-brand-red">
-                      <LogOut className="h-4 w-4 mr-2"/> Se déconnecter
+                      <LogOut className="h-4 w-4 mr-2"/> {t("common.signOut")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -227,7 +227,7 @@ export function DashboardShell({ children, title, subtitle, action }: { children
           }/>
           <Link
             to="/dashboard/settings"
-            aria-label="Paramètres"
+            aria-label={t("nav.settings")}
             className={cn(
               "grid h-10 w-10 place-items-center rounded-full transition",
               isActive("/dashboard/settings") ? "bg-cream text-ink" : "text-cream/70",
