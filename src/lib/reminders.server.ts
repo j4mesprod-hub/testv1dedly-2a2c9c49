@@ -21,7 +21,7 @@ function reminderText(opts: {
   );
 }
 
-async function sendTelegram(chatId: number | string, text: string) {
+export async function sendTelegram(chatId: number | string, text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new Error("TELEGRAM_BOT_TOKEN missing");
   const res = await fetch(`${TELEGRAM_API_BASE}/bot${token}/sendMessage`, {
@@ -42,7 +42,7 @@ async function sendTelegram(chatId: number | string, text: string) {
   if (!json.ok) throw new Error(`Telegram: ${json.description ?? "unknown"}`);
 }
 
-function parisHour(now: Date): number {
+export function parisHour(now: Date): number {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Paris",
     hour: "2-digit",
@@ -51,7 +51,16 @@ function parisHour(now: Date): number {
   return parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10) % 24;
 }
 
-function parisDateStr(now: Date): string {
+export function parisMinute(now: Date): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Paris",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  return parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
+}
+
+export function parisDateStr(now: Date): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Paris",
     year: "numeric",
@@ -69,7 +78,7 @@ function utcMidnightFromDateStr(value: string): number {
   return Date.UTC(year, month - 1, day);
 }
 
-function parisDaysBetween(fromDateStr: string, to: Date): number {
+export function parisDaysBetween(fromDateStr: string, to: Date): number {
   const toDateStr = parisDateStr(to);
   return Math.round(
     (utcMidnightFromDateStr(toDateStr) - utcMidnightFromDateStr(fromDateStr)) / 86400000,
@@ -109,8 +118,9 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
   let profilesQuery = supabaseAdmin
     .from("profiles")
     .select("id, display_name, telegram_chat_id")
-    .eq("has_active_sub", true)
     .not("telegram_chat_id", "is", null);
+  // Le filtre abonnement ne s'applique qu'aux envois automatiques globaux.
+  if (!opts.forceUserId) profilesQuery = profilesQuery.eq("has_active_sub", true);
   if (opts.forceUserId) profilesQuery = profilesQuery.eq("id", opts.forceUserId);
 
   const { data: profiles, error: pErr } = await profilesQuery;

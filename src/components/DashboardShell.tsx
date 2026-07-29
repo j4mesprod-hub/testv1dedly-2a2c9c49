@@ -5,15 +5,16 @@ import { cn } from "@/lib/utils";
 import { NotificationsBell } from "./NotificationsBell";
 import { NewDeadlineDialog } from "./NewDeadlineDialog";
 import { useProfile } from "@/hooks/use-profile";
+import { useT } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const nav = [
-  { to: "/dashboard", label: "Vue d'ensemble", icon: LayoutDashboard, exact: true },
-  { to: "/dashboard/calendar", label: "Calendrier", icon: Calendar },
-  { to: "/dashboard/tasks", label: "Deadlines", icon: ListChecks },
-  { to: "/dashboard/stats", label: "Statistiques", icon: BarChart3 },
+  { to: "/dashboard", key: "nav.overview" as const, icon: LayoutDashboard, exact: true },
+  { to: "/dashboard/calendar", key: "nav.calendar" as const, icon: Calendar },
+  { to: "/dashboard/tasks", key: "nav.deadlines" as const, icon: ListChecks },
+  { to: "/dashboard/stats", key: "nav.stats" as const, icon: BarChart3 },
 ];
 
 function initials(name?: string | null, email?: string | null) {
@@ -72,6 +73,7 @@ function NavIcon({
 export function DashboardShell({ children, title, subtitle, action }: { children: ReactNode; title: string; subtitle?: string; action?: ReactNode }) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const { data: profile } = useProfile();
+  const { t } = useT();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -116,23 +118,23 @@ export function DashboardShell({ children, title, subtitle, action }: { children
             </Link>
             <NewDeadlineDialog trigger={
               <button
-                aria-label="Nouvelle deadline"
+                aria-label={t("nav.newDeadline")}
                 className={cn(
                   "flex h-11 items-center rounded-full border border-cream/25 text-cream hover:bg-cream/10 transition-all",
                   sidebarExpanded ? "w-full justify-start gap-3 px-3" : "w-11 justify-center",
                 )}
               >
                 <Plus className="h-[18px] w-[18px] shrink-0" />
-                <span className={cn("truncate text-sm font-semibold", sidebarExpanded ? "block" : "sr-only")}>Nouvelle</span>
+                <span className={cn("truncate text-sm font-semibold", sidebarExpanded ? "block" : "sr-only")}>{t("nav.new")}</span>
               </button>
             }/>
             <div className="h-px w-6 bg-cream/10 my-1" />
             {nav.map((item) => (
-              <NavIcon key={item.to} to={item.to} label={item.label} icon={item.icon} active={isActive(item.to, item.exact)} expanded={sidebarExpanded} />
+              <NavIcon key={item.to} to={item.to} label={t(item.key)} icon={item.icon} active={isActive(item.to, item.exact)} expanded={sidebarExpanded} />
             ))}
           </div>
           <div className="flex w-full flex-col items-center gap-2">
-            <NavIcon to="/dashboard/settings" label="Paramètres" icon={Settings} active={isActive("/dashboard/settings")} expanded={sidebarExpanded} />
+            <NavIcon to="/dashboard/settings" label={t("nav.settings")} icon={Settings} active={isActive("/dashboard/settings")} expanded={sidebarExpanded} />
           </div>
         </aside>
 
@@ -145,7 +147,7 @@ export function DashboardShell({ children, title, subtitle, action }: { children
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Rechercher…"
+                  placeholder={t("common.search")}
                   className="w-full h-10 rounded-full bg-secondary pl-10 pr-4 text-sm outline-none border border-transparent focus:border-ink/20"
                 />
               </form>
@@ -168,7 +170,7 @@ export function DashboardShell({ children, title, subtitle, action }: { children
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>
-                      <div className="text-sm font-semibold truncate">{profile?.display_name ?? "Utilisateur"}</div>
+                      <div className="text-sm font-semibold truncate">{profile?.display_name ?? t("common.user")}</div>
                       <div className="text-xs text-muted-foreground font-normal truncate">{profile?.reminder_email}</div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator/>
@@ -178,10 +180,10 @@ export function DashboardShell({ children, title, subtitle, action }: { children
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem onClick={() => navigate({ to: "/dashboard/settings" })}>
-                      <Settings className="h-4 w-4 mr-2"/> Paramètres
+                      <Settings className="h-4 w-4 mr-2"/> {t("nav.settings")}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={signOut} className="text-brand-red">
-                      <LogOut className="h-4 w-4 mr-2"/> Se déconnecter
+                      <LogOut className="h-4 w-4 mr-2"/> {t("common.signOut")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -210,7 +212,7 @@ export function DashboardShell({ children, title, subtitle, action }: { children
               <Link
                 key={item.to}
                 to={item.to}
-                aria-label={item.label}
+                aria-label={t(item.key)}
                 className={cn(
                   "grid h-10 w-10 place-items-center rounded-full transition",
                   active ? "bg-cream text-ink" : "text-cream/70 hover:text-cream",
@@ -221,13 +223,13 @@ export function DashboardShell({ children, title, subtitle, action }: { children
             );
           })}
           <NewDeadlineDialog trigger={
-            <button aria-label="Nouvelle deadline" className="grid h-10 w-10 place-items-center rounded-full bg-brand-orange text-ink">
+            <button aria-label={t("nav.newDeadline")} className="grid h-10 w-10 place-items-center rounded-full bg-brand-orange text-ink">
               <Plus className="h-[18px] w-[18px]" />
             </button>
           }/>
           <Link
             to="/dashboard/settings"
-            aria-label="Paramètres"
+            aria-label={t("nav.settings")}
             className={cn(
               "grid h-10 w-10 place-items-center rounded-full transition",
               isActive("/dashboard/settings") ? "bg-cream text-ink" : "text-cream/70",

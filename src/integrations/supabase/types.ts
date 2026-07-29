@@ -111,9 +111,14 @@ export type Database = {
           display_name: string | null
           has_active_sub: boolean
           id: string
+          language: string
           plan: Database["public"]["Enums"]["plan_type"]
           plan_since: string | null
           reminder_email: string | null
+          summary_enabled: boolean
+          summary_hour: number
+          summary_last_sent_on: string | null
+          summary_minute: number
           telegram_chat_id: number | null
           timezone: string | null
           updated_at: string
@@ -124,9 +129,14 @@ export type Database = {
           display_name?: string | null
           has_active_sub?: boolean
           id: string
+          language?: string
           plan?: Database["public"]["Enums"]["plan_type"]
           plan_since?: string | null
           reminder_email?: string | null
+          summary_enabled?: boolean
+          summary_hour?: number
+          summary_last_sent_on?: string | null
+          summary_minute?: number
           telegram_chat_id?: number | null
           timezone?: string | null
           updated_at?: string
@@ -137,9 +147,14 @@ export type Database = {
           display_name?: string | null
           has_active_sub?: boolean
           id?: string
+          language?: string
           plan?: Database["public"]["Enums"]["plan_type"]
           plan_since?: string | null
           reminder_email?: string | null
+          summary_enabled?: boolean
+          summary_hour?: number
+          summary_last_sent_on?: string | null
+          summary_minute?: number
           telegram_chat_id?: number | null
           timezone?: string | null
           updated_at?: string

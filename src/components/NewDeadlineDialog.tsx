@@ -28,7 +28,6 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
   const [dueAt, setDueAt] = useState("");
   const [priority, setPriority] = useState("medium");
   const [alertRules, setAlertRules] = useState<number[]>([30, 7, 1, 0]);
-  const [alertHour, setAlertHour] = useState<number>(9);
   const create = useCreateDeadline();
 
   const toggle = (v: number) =>
@@ -46,12 +45,12 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
         priority,
         color: PRIORITY_COLOR[priority] ?? "yellow",
         alert_rules: alertRules,
-        alert_hour: alertHour,
+        alert_hour: 9,
       });
       toast.success("Deadline créée");
       setOpen(false);
       setTitle(""); setDueAt("");
-      setPriority("medium"); setAlertRules([30, 7, 1, 0]); setAlertHour(9);
+      setPriority("medium"); setAlertRules([30, 7, 1, 0]);
     } catch (e) {
       toast.error("Erreur", { description: e instanceof Error ? e.message : "" });
     }
@@ -90,33 +89,20 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 sm:items-end">
-            <div className="space-y-2 min-w-0">
-              <Label className="text-xs text-muted-foreground font-normal">Rappels</Label>
-              <div className="flex flex-wrap gap-2">
-                {REMINDER_PRESETS.map((p) => {
-                  const active = alertRules.includes(p.v);
-                  return (
-                    <button
-                      type="button"
-                      key={p.v}
-                      onClick={() => toggle(p.v)}
-                      className={`px-3 h-9 rounded-full text-xs font-semibold border transition ${active ? "bg-ink text-cream border-ink" : "bg-background border-border text-foreground hover:bg-secondary"}`}
-                    >{p.label}</button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground font-normal">Heure d'envoi</Label>
-              <Select value={String(alertHour)} onValueChange={(v) => setAlertHour(parseInt(v, 10))}>
-                <SelectTrigger className="h-9 rounded-full px-4 w-full sm:w-[110px]"><SelectValue/></SelectTrigger>
-                <SelectContent className="max-h-64">
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <SelectItem key={i} value={String(i)}>{String(i).padStart(2, "0")}:00</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-2 min-w-0">
+            <Label className="text-xs text-muted-foreground font-normal">Rappels</Label>
+            <div className="flex flex-wrap gap-2">
+              {REMINDER_PRESETS.map((p) => {
+                const active = alertRules.includes(p.v);
+                return (
+                  <button
+                    type="button"
+                    key={p.v}
+                    onClick={() => toggle(p.v)}
+                    className={`px-3 h-9 rounded-full text-xs font-semibold border transition ${active ? "bg-ink text-cream border-ink" : "bg-background border-border text-foreground hover:bg-secondary"}`}
+                  >{p.label}</button>
+                );
+              })}
             </div>
           </div>
         </div>

@@ -13,9 +13,9 @@ import {
   sendTestTelegramMessage,
   linkTelegramAccount,
   unlinkTelegramAccount,
-  triggerReminderDryRun,
+  sendDailySummaryNow,
 } from "@/lib/telegram.functions";
-import { useDeadlines } from "@/hooks/use-deadlines";
+import { useT } from "@/lib/i18n";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -82,17 +82,19 @@ function ProfileTab() {
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [timezone, setTimezone] = useState("Europe/Paris");
+  const [language, setLanguage] = useState("fr");
 
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name ?? "");
       setAvatarUrl(profile.avatar_url ?? "");
       setTimezone(profile.timezone ?? "Europe/Paris");
+      setLanguage(profile.language ?? "fr");
     }
   }, [profile]);
 
   const save = async () => {
-    await update.mutateAsync({ display_name: displayName || null, avatar_url: avatarUrl || null, timezone });
+    await update.mutateAsync({ display_name: displayName || null, avatar_url: avatarUrl || null, timezone, language });
     toast.success("Profil mis à jour");
   };
 
@@ -126,6 +128,16 @@ function ProfileTab() {
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Email de connexion</Label>
             <Input value={profile?.reminder_email ?? ""} disabled className="h-10 rounded-xl"/>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-muted-foreground">Langue / Language</Label>
+            <Select value={language} onValueChange={setLanguage}>
+              <SelectTrigger className="h-10 rounded-xl"><SelectValue/></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="fr">Français</SelectItem>
+                <SelectItem value="en">English</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Fuseau horaire</Label>
@@ -253,100 +265,97 @@ function NotifTab() {
 
         <p className="text-xs text-muted-foreground pt-4 border-t border-border">Les horaires de rappel (J-30, J-7, J-1…) se choisissent au moment de la création de chaque deadline.</p>
       </div>
-      {linked && <DryRunCard/>}
+      {linked && <SummaryCard/>}
     </div>
   );
 }
 
-function DryRunCard() {
-  const { data: deadlines } = useDeadlines();
-  const nowParisHour = () => {
-    const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "2-digit", hour12: false }).formatToParts(new Date());
-    return parseInt(parts.find((p) => p.type === "hour")?.value ?? "9", 10) % 24;
-  };
-  const [deadlineId, setDeadlineId] = useState<string>("all");
-  const [overrideHour, setOverrideHour] = useState<number>(nowParisHour());
-  const [forceSend, setForceSend] = useState(true);
+function SummaryCard() {
+  const { data: profile } = useProfile();
+  const update = useUpdateProfile();
+  const { t } = useT();
+  const [enabled, setEnabled] = useState(true);
+  const [hour, setHour] = useState(9);
+  const [minute, setMinute] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [last, setLast] = useState<number | null>(null);
 
-  const activeDeadlines = (deadlines ?? []).filter((d) => d.status !== "completed");
+  useEffect(() => {
+    if (profile) {
+      setEnabled(profile.summary_enabled ?? true);
+      setHour(profile.summary_hour ?? 9);
+      setMinute(profile.summary_minute ?? 0);
+    }
+  }, [profile]);
 
-  const run = async () => {
+  const save = async () => {
+    await update.mutateAsync({
+      summary_enabled: enabled,
+      summary_hour: hour,
+      summary_minute: minute,
+    });
+    toast.success("Heure du résumé enregistrée");
+  };
+
+  const sendNow = async () => {
     setBusy(true);
     try {
-      const r = await triggerReminderDryRun({
-        data: {
-          deadlineId: deadlineId === "all" ? undefined : deadlineId,
-          overrideHour,
-          forceSend,
-        },
-      });
-      setLast(r.sent);
-      if (r.sent === 0) {
-        toast.info("Aucun message envoyé", {
-          description: "Aucun rappel ne correspond aux critères. Coche « Forcer l'envoi » pour ignorer les filtres.",
-        });
-      } else {
-        toast.success(`${r.sent} message${r.sent > 1 ? "s" : ""} Telegram envoyé${r.sent > 1 ? "s" : ""}`);
-      }
+      await sendDailySummaryNow();
+      toast.success(t("summary.sent"));
     } catch (e) {
-      toast.error("Test impossible", { description: e instanceof Error ? e.message : "" });
+      toast.error("Envoi impossible", { description: e instanceof Error ? e.message : "" });
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="rounded-2xl bg-card border border-border p-6 space-y-4">
+    <div className="rounded-2xl bg-card border border-border p-6 space-y-5">
       <div>
-        <h3 className="font-display text-xl font-bold mb-1">Tester l'envoi des rappels</h3>
-        <p className="text-sm text-muted-foreground">
-          Déclenche un envoi simulé sur votre Telegram. La déduplication n'est pas modifiée : le vrai
-          déclenchement horaire enverra le rappel comme prévu.
-        </p>
+        <h3 className="font-display text-xl font-bold mb-1">{t("summary.title")}</h3>
+        <p className="text-sm text-muted-foreground">{t("summary.desc")}</p>
       </div>
-      <div className="grid gap-3 md:grid-cols-2">
+
+      <label className="flex items-center gap-3 text-sm cursor-pointer">
+        <Checkbox checked={enabled} onCheckedChange={(v) => setEnabled(v === true)} />
+        <span className="font-medium">{t("summary.enabled")}</span>
+      </label>
+
+      <div className="grid gap-3 sm:grid-cols-2 max-w-md">
         <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Rappel à simuler</Label>
-          <Select value={deadlineId} onValueChange={setDeadlineId}>
-            <SelectTrigger className="h-11 rounded-xl"><SelectValue/></SelectTrigger>
-            <SelectContent className="max-h-64">
-              <SelectItem value="all">Tous mes rappels</SelectItem>
-              {activeDeadlines.map((d) => (
-                <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium text-muted-foreground">Heure simulée (Paris)</Label>
-          <Select value={String(overrideHour)} onValueChange={(v) => setOverrideHour(parseInt(v, 10))}>
+          <Label className="text-xs font-medium text-muted-foreground">{t("summary.hour")}</Label>
+          <Select value={String(hour)} onValueChange={(v) => setHour(parseInt(v, 10))}>
             <SelectTrigger className="h-11 rounded-xl"><SelectValue/></SelectTrigger>
             <SelectContent className="max-h-64">
               {Array.from({ length: 24 }, (_, i) => (
-                <SelectItem key={i} value={String(i)}>{String(i).padStart(2, "0")}:00</SelectItem>
+                <SelectItem key={i} value={String(i)}>{String(i).padStart(2, "0")} h</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium text-muted-foreground">{t("summary.minute")}</Label>
+          <Select value={String(minute)} onValueChange={(v) => setMinute(parseInt(v, 10))}>
+            <SelectTrigger className="h-11 rounded-xl"><SelectValue/></SelectTrigger>
+            <SelectContent className="max-h-64">
+              {Array.from({ length: 12 }, (_, i) => i * 5).map((m) => (
+                <SelectItem key={m} value={String(m)}>{String(m).padStart(2, "0")}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
       </div>
-      <label className="flex items-start gap-3 text-sm cursor-pointer">
-        <Checkbox checked={forceSend} onCheckedChange={(v) => setForceSend(v === true)} className="mt-0.5"/>
-        <span>
-          <span className="font-medium">Forcer l'envoi</span>
-          <span className="block text-xs text-muted-foreground">Ignore les filtres <code>alert_rules</code> et <code>alert_hour</code> pour envoyer un exemple immédiatement.</span>
-        </span>
-      </label>
-      <div className="flex items-center gap-3 pt-1">
-        <Button onClick={run} disabled={busy} className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-5">
-          {busy ? "Envoi…" : "Envoyer un test"}
+
+      <p className="text-sm text-muted-foreground">
+        Envoi prévu à <span className="font-semibold text-foreground">{String(hour).padStart(2, "0")}h{String(minute).padStart(2, "0")}</span> (heure de Paris).
+      </p>
+
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <Button onClick={save} disabled={update.isPending} className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-5">
+          {update.isPending ? t("common.saving") : t("common.save")}
         </Button>
-        {last !== null && (
-          <span className="text-xs text-muted-foreground">
-            Dernier essai : {last} message{last > 1 ? "s" : ""} envoyé{last > 1 ? "s" : ""}
-          </span>
-        )}
+        <Button variant="outline" onClick={sendNow} disabled={busy} className="rounded-full h-11 px-5">
+          {busy ? t("common.sending") : t("summary.sendNow")}
+        </Button>
       </div>
     </div>
   );

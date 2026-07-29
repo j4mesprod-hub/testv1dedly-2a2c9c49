@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { processReminders } from "@/lib/reminders.server";
+import { processDailySummaries } from "@/lib/summary.server";
 
 const TELEGRAM_API_BASE = "https://api.telegram.org";
 
@@ -135,4 +136,21 @@ export const triggerReminderDryRun = createServerFn({ method: "POST" })
       details: result.details,
       currentHour: result.currentHour,
     };
+  });
+
+/** Envoie immédiatement le résumé quotidien à l'utilisateur connecté. */
+export const sendDailySummaryNow = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: profile, error } = await context.supabase
+      .from("profiles")
+      .select("telegram_chat_id")
+      .eq("id", context.userId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!profile?.telegram_chat_id) {
+      throw new Error("Liez d'abord votre compte Telegram");
+    }
+    const result = await processDailySummaries({ forceUserId: context.userId, force: true });
+    return { sent: result.sent, parisTime: result.parisTime };
   });
