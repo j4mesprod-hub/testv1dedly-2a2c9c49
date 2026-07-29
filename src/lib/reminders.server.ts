@@ -118,8 +118,9 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
   let profilesQuery = supabaseAdmin
     .from("profiles")
     .select("id, display_name, telegram_chat_id")
-    .eq("has_active_sub", true)
     .not("telegram_chat_id", "is", null);
+  // Le filtre abonnement ne s'applique qu'aux envois automatiques globaux.
+  if (!opts.forceUserId) profilesQuery = profilesQuery.eq("has_active_sub", true);
   if (opts.forceUserId) profilesQuery = profilesQuery.eq("id", opts.forceUserId);
 
   const { data: profiles, error: pErr } = await profilesQuery;
