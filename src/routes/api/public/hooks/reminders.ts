@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { processReminders } from "@/lib/reminders.server";
+import { processDailySummaries } from "@/lib/summary.server";
 
 async function authorize(request: Request): Promise<Response | null> {
   const expected = process.env.CRON_SECRET;
