@@ -57,14 +57,37 @@ function Overview() {
 
   const isEmpty = !isLoading && deadlines.length === 0;
 
+  const sendSummary = async () => {
+    setSummaryBusy(true);
+    try {
+      await sendDailySummaryNow();
+      toast.success(t("summary.sent"));
+    } catch (e) {
+      toast.error("Envoi impossible", { description: e instanceof Error ? e.message : "" });
+    } finally {
+      setSummaryBusy(false);
+    }
+  };
+
   return (
     <DashboardShell
-      title={firstName ? `Bonjour ${firstName} 👋` : "Bonjour 👋"}
-      subtitle="Voici un aperçu de vos deadlines."
+      title={firstName ? `${t("overview.hello")} ${firstName} 👋` : `${t("overview.hello")} 👋`}
+      subtitle={t("overview.subtitle")}
       action={
-        <NewDeadlineDialog trigger={
-          <Button className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-5"><Plus className="h-4 w-4 mr-1.5"/>Nouvelle deadline</Button>
-        }/>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => { void sendSummary(); }}
+            disabled={summaryBusy}
+            className="rounded-full h-11 px-5"
+          >
+            <Send className="h-4 w-4 mr-1.5"/>
+            {summaryBusy ? t("common.sending") : t("overview.summaryBtn")}
+          </Button>
+          <NewDeadlineDialog trigger={
+            <Button className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-5"><Plus className="h-4 w-4 mr-1.5"/>{t("nav.newDeadline")}</Button>
+          }/>
+        </div>
       }
     >
       {isEmpty ? (
