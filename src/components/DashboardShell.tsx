@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { NotificationsBell } from "./NotificationsBell";
 import { NewDeadlineDialog } from "./NewDeadlineDialog";
 import { useProfile } from "@/hooks/use-profile";
+import { useT } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -128,7 +129,7 @@ export function DashboardShell({ children, title, subtitle, action }: { children
             }/>
             <div className="h-px w-6 bg-cream/10 my-1" />
             {nav.map((item) => (
-              <NavIcon key={item.to} to={item.to} label={item.label} icon={item.icon} active={isActive(item.to, item.exact)} expanded={sidebarExpanded} />
+              <NavIcon key={item.to} to={item.to} label={t(item.key)} icon={item.icon} active={isActive(item.to, item.exact)} expanded={sidebarExpanded} />
             ))}
           </div>
           <div className="flex w-full flex-col items-center gap-2">
@@ -210,7 +211,7 @@ export function DashboardShell({ children, title, subtitle, action }: { children
               <Link
                 key={item.to}
                 to={item.to}
-                aria-label={item.label}
+                aria-label={t(item.key)}
                 className={cn(
                   "grid h-10 w-10 place-items-center rounded-full transition",
                   active ? "bg-cream text-ink" : "text-cream/70 hover:text-cream",
