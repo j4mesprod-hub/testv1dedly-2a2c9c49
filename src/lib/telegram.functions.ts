@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { processReminders } from "@/lib/reminders.server";
+import { processDailySummaries } from "@/lib/summary.server";
 
 const TELEGRAM_API_BASE = "https://api.telegram.org";
 
