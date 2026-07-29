@@ -46,7 +46,13 @@ export const Route = createFileRoute("/api/public/hooks/reminders")({
 
         try {
           const result = await processReminders(body);
-          return new Response(JSON.stringify({ ok: true, ...result }), {
+          let summary: { sent: number; skipped: number; parisTime: string } | null = null;
+          try {
+            summary = await processDailySummaries();
+          } catch (e) {
+            console.error("[summary] failed", e);
+          }
+          return new Response(JSON.stringify({ ok: true, ...result, summary }), {
             headers: { "content-type": "application/json" },
           });
         } catch (err) {
