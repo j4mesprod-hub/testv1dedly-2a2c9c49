@@ -13,9 +13,9 @@ import {
   sendTestTelegramMessage,
   linkTelegramAccount,
   unlinkTelegramAccount,
-  triggerReminderDryRun,
+  sendDailySummaryNow,
 } from "@/lib/telegram.functions";
-import { useDeadlines } from "@/hooks/use-deadlines";
+import { useT } from "@/lib/i18n";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -253,7 +253,7 @@ function NotifTab() {
 
         <p className="text-xs text-muted-foreground pt-4 border-t border-border">Les horaires de rappel (J-30, J-7, J-1…) se choisissent au moment de la création de chaque deadline.</p>
       </div>
-      {linked && <DryRunCard/>}
+      {linked && <SummaryCard/>}
     </div>
   );
 }
