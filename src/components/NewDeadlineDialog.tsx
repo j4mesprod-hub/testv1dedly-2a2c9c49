@@ -28,7 +28,6 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
   const [dueAt, setDueAt] = useState("");
   const [priority, setPriority] = useState("medium");
   const [alertRules, setAlertRules] = useState<number[]>([30, 7, 1, 0]);
-  const [alertHour, setAlertHour] = useState<number>(9);
   const create = useCreateDeadline();
 
   const toggle = (v: number) =>
@@ -46,12 +45,12 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
         priority,
         color: PRIORITY_COLOR[priority] ?? "yellow",
         alert_rules: alertRules,
-        alert_hour: alertHour,
+        alert_hour: 9,
       });
       toast.success("Deadline créée");
       setOpen(false);
       setTitle(""); setDueAt("");
-      setPriority("medium"); setAlertRules([30, 7, 1, 0]); setAlertHour(9);
+      setPriority("medium"); setAlertRules([30, 7, 1, 0]);
     } catch (e) {
       toast.error("Erreur", { description: e instanceof Error ? e.message : "" });
     }
