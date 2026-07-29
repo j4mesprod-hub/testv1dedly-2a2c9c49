@@ -21,7 +21,7 @@ function reminderText(opts: {
   );
 }
 
-async function sendTelegram(chatId: number | string, text: string) {
+export async function sendTelegram(chatId: number | string, text: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) throw new Error("TELEGRAM_BOT_TOKEN missing");
   const res = await fetch(`${TELEGRAM_API_BASE}/bot${token}/sendMessage`, {
