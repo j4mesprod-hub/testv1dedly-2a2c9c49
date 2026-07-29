@@ -73,6 +73,7 @@ function NavIcon({
 export function DashboardShell({ children, title, subtitle, action }: { children: ReactNode; title: string; subtitle?: string; action?: ReactNode }) {
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const { data: profile } = useProfile();
+  const { t } = useT();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -117,14 +118,14 @@ export function DashboardShell({ children, title, subtitle, action }: { children
             </Link>
             <NewDeadlineDialog trigger={
               <button
-                aria-label="Nouvelle deadline"
+                aria-label={t("nav.newDeadline")}
                 className={cn(
                   "flex h-11 items-center rounded-full border border-cream/25 text-cream hover:bg-cream/10 transition-all",
                   sidebarExpanded ? "w-full justify-start gap-3 px-3" : "w-11 justify-center",
                 )}
               >
                 <Plus className="h-[18px] w-[18px] shrink-0" />
-                <span className={cn("truncate text-sm font-semibold", sidebarExpanded ? "block" : "sr-only")}>Nouvelle</span>
+                <span className={cn("truncate text-sm font-semibold", sidebarExpanded ? "block" : "sr-only")}>{t("nav.new")}</span>
               </button>
             }/>
             <div className="h-px w-6 bg-cream/10 my-1" />
@@ -222,7 +223,7 @@ export function DashboardShell({ children, title, subtitle, action }: { children
             );
           })}
           <NewDeadlineDialog trigger={
-            <button aria-label="Nouvelle deadline" className="grid h-10 w-10 place-items-center rounded-full bg-brand-orange text-ink">
+            <button aria-label={t("nav.newDeadline")} className="grid h-10 w-10 place-items-center rounded-full bg-brand-orange text-ink">
               <Plus className="h-[18px] w-[18px]" />
             </button>
           }/>
