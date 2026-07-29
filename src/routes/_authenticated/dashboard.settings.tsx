@@ -82,17 +82,19 @@ function ProfileTab() {
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [timezone, setTimezone] = useState("Europe/Paris");
+  const [language, setLanguage] = useState("fr");
 
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name ?? "");
       setAvatarUrl(profile.avatar_url ?? "");
       setTimezone(profile.timezone ?? "Europe/Paris");
+      setLanguage(profile.language ?? "fr");
     }
   }, [profile]);
 
   const save = async () => {
-    await update.mutateAsync({ display_name: displayName || null, avatar_url: avatarUrl || null, timezone });
+    await update.mutateAsync({ display_name: displayName || null, avatar_url: avatarUrl || null, timezone, language });
     toast.success("Profil mis à jour");
   };
 
