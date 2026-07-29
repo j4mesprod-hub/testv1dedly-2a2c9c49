@@ -42,13 +42,22 @@ export async function sendTelegram(chatId: number | string, text: string) {
   if (!json.ok) throw new Error(`Telegram: ${json.description ?? "unknown"}`);
 }
 
-function parisHour(now: Date): number {
+export function parisHour(now: Date): number {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Paris",
     hour: "2-digit",
     hour12: false,
   }).formatToParts(now);
   return parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10) % 24;
+}
+
+export function parisMinute(now: Date): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Paris",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+  return parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
 }
 
 function parisDateStr(now: Date): string {
