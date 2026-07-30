@@ -42,27 +42,35 @@ export async function sendTelegram(chatId: number | string, text: string) {
   if (!json.ok) throw new Error(`Telegram: ${json.description ?? "unknown"}`);
 }
 
-export function parisHour(now: Date): number {
-  const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Paris",
-    hour: "2-digit",
-    hour12: false,
-  }).formatToParts(now);
-  return parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10) % 24;
-}
+export const SUPPORTED_TIMEZONES = [
+  "Europe/Paris",
+  "America/New_York",
+  "America/Los_Angeles",
+] as const;
 
-export function parisMinute(now: Date): number {
+export function tzTimeParts(now: Date, tz: string): { hour: number; minute: number } {
   const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/Paris",
+    timeZone: tz,
+    hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   }).formatToParts(now);
-  return parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
+  const hour = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10) % 24;
+  const minute = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
+  return { hour, minute };
 }
 
-export function parisDateStr(now: Date): string {
+export function tzHour(now: Date, tz: string): number {
+  return tzTimeParts(now, tz).hour;
+}
+
+export function tzMinute(now: Date, tz: string): number {
+  return tzTimeParts(now, tz).minute;
+}
+
+export function tzDateStr(now: Date, tz: string): string {
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Paris",
+    timeZone: tz,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -73,13 +81,25 @@ export function parisDateStr(now: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+export function parisHour(now: Date): number {
+  return tzHour(now, "Europe/Paris");
+}
+
+export function parisMinute(now: Date): number {
+  return tzMinute(now, "Europe/Paris");
+}
+
+export function parisDateStr(now: Date): string {
+  return tzDateStr(now, "Europe/Paris");
+}
+
 function utcMidnightFromDateStr(value: string): number {
   const [year, month, day] = value.split("-").map((part) => parseInt(part, 10));
   return Date.UTC(year, month - 1, day);
 }
 
-export function parisDaysBetween(fromDateStr: string, to: Date): number {
-  const toDateStr = parisDateStr(to);
+export function parisDaysBetween(fromDateStr: string, to: Date, tz = "Europe/Paris"): number {
+  const toDateStr = tzDateStr(to, tz);
   return Math.round(
     (utcMidnightFromDateStr(toDateStr) - utcMidnightFromDateStr(fromDateStr)) / 86400000,
   );
@@ -117,7 +137,7 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
 
   let profilesQuery = supabaseAdmin
     .from("profiles")
-    .select("id, display_name, telegram_chat_id")
+    .select("id, display_name, telegram_chat_id, timezone")
     .not("telegram_chat_id", "is", null);
   // Le filtre abonnement ne s'applique qu'aux envois automatiques globaux.
   if (!opts.forceUserId) profilesQuery = profilesQuery.eq("has_active_sub", true);
@@ -133,6 +153,10 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
     const chatId = opts.dryRunChatId ?? profile.telegram_chat_id;
     if (chatId === null || chatId === undefined) continue;
 
+    const tz = profile.timezone ?? "Europe/Paris";
+    const userHour = opts.overrideHour ?? tzHour(now, tz);
+    const userDateStr = tzDateStr(now, tz);
+
     let query = supabaseAdmin
       .from("deadlines")
       .select("id, title, category, client_name, due_at, alert_rules, alert_hour, alerts_sent, status")
@@ -145,23 +169,23 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
 
     for (const d of deadlines ?? []) {
       const dueDate = new Date(d.due_at);
-      const daysAway = parisDaysBetween(todayStr, dueDate);
+      const daysAway = parisDaysBetween(userDateStr, dueDate, tz);
       const rules: number[] = (d.alert_rules as number[] | null) ?? [];
       const alertHour: number = (d.alert_hour as number | null) ?? 9;
       const sent: string[] = (d.alerts_sent as string[] | null) ?? [];
 
       if (!forceSend) {
         if (!rules.includes(daysAway)) continue;
-        if (currentHour !== alertHour) continue;
+        if (userHour !== alertHour) continue;
       }
 
-      const effectiveHour = forceSend ? currentHour : alertHour;
+      const effectiveHour = forceSend ? userHour : alertHour;
       const combo = `${daysAway}-${effectiveHour}`;
 
       if (!dryRun && sent.includes(combo)) continue;
 
       const dueDateStr = dueDate.toLocaleDateString("fr-FR", {
-        timeZone: "Europe/Paris",
+        timeZone: tz,
         day: "2-digit",
         month: "long",
         year: "numeric",

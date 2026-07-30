@@ -121,7 +121,7 @@ function Landing() {
             <h2 className="text-5xl font-semibold tracking-[-0.05em] md:text-6xl">Commencez gratuitement.</h2>
           </div>
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="rounded-[1.75rem] border bg-background p-7">
+            <div className="flex flex-col rounded-[1.75rem] border bg-background p-7">
               <div className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-2">Gratuit</div>
               <div className="text-5xl font-semibold tracking-[-0.04em]">0 €<span className="text-lg text-muted-foreground"> / mois</span></div>
               <p className="mt-3 text-muted-foreground">Pour découvrir Deadly.</p>
@@ -132,11 +132,13 @@ function Landing() {
                   </li>
                 ))}
               </ul>
-              <Link to="/auth" className="mt-7 flex h-12 items-center justify-center gap-2 rounded-full border bg-card font-semibold">
-                Commencer gratuitement
-              </Link>
+              <div className="mt-auto pt-7">
+                <Link to="/auth" className="flex h-12 items-center justify-center gap-2 rounded-full border bg-card font-semibold">
+                  Commencer gratuitement
+                </Link>
+              </div>
             </div>
-            <div className="rounded-[1.75rem] border-2 border-primary bg-background p-7 relative shadow-sm">
+            <div className="relative flex flex-col rounded-[1.75rem] border-2 border-primary bg-background p-7 shadow-sm">
               <div className="absolute -top-3 left-7 rounded-full bg-primary text-primary-foreground text-xs font-semibold px-3 py-1">Recommandé</div>
               <div className="text-sm font-semibold uppercase tracking-widest text-primary mb-2">Pro</div>
               <div className="text-5xl font-semibold tracking-[-0.04em]">9 €<span className="text-lg text-muted-foreground"> / mois</span></div>
@@ -148,9 +150,11 @@ function Landing() {
                   </li>
                 ))}
               </ul>
-              <Link to="/auth" className="mt-7 flex h-12 items-center justify-center gap-2 rounded-full bg-primary font-semibold text-primary-foreground">
-                Passer au Pro <ArrowRight className="size-4"/>
-              </Link>
+              <div className="mt-auto pt-7">
+                <Link to="/auth" className="flex h-12 items-center justify-center gap-2 rounded-full bg-primary font-semibold text-primary-foreground">
+                  Passer au Pro <ArrowRight className="size-4"/>
+                </Link>
+              </div>
             </div>
           </div>
         </div>

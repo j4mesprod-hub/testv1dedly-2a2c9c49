@@ -8,6 +8,8 @@ import { Mail, Bell, Slack, Chrome, Github, Check, Trash2, Loader2, Send } from 
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createProCheckout, syncProAfterCheckout } from "@/lib/stripe.functions";
+import { deleteMyAccount } from "@/lib/account.functions";
+import { supabase } from "@/integrations/supabase/client";
 import {
   getTelegramBotUsername,
   sendTestTelegramMessage,
@@ -101,7 +103,7 @@ function ProfileTab() {
   if (isLoading) return <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Chargement…</div>;
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4">
+    <div className="max-w-4xl">
       <div className="rounded-2xl bg-card border border-border p-6 space-y-6">
         <div>
           <h3 className="font-display text-xl font-bold mb-1">Informations personnelles</h3>
@@ -141,7 +143,14 @@ function ProfileTab() {
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Fuseau horaire</Label>
-            <Input value={timezone} onChange={(e)=>setTimezone(e.target.value)} className="h-10 rounded-xl"/>
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger className="h-10 rounded-xl"><SelectValue/></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Europe/Paris">Paris (Europe/Paris)</SelectItem>
+                <SelectItem value="America/New_York">New York (America/New_York)</SelectItem>
+                <SelectItem value="America/Los_Angeles">Los Angeles (America/Los_Angeles)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
@@ -149,13 +158,41 @@ function ProfileTab() {
             {update.isPending ? "Enregistrement…" : "Enregistrer"}
           </Button>
         </div>
-      </div>
-      <div className="rounded-2xl bg-brand-red/10 border border-brand-red/30 p-5 self-start">
-        <h4 className="font-display font-bold text-brand-red mb-1">Zone dangereuse</h4>
-        <p className="text-sm text-muted-foreground mb-4">Cette action est irréversible.</p>
-        <Button variant="outline" className="rounded-full border-brand-red/40 text-brand-red hover:bg-brand-red/10"><Trash2 className="h-4 w-4 mr-2"/>Supprimer mon compte</Button>
+
+        <div className="pt-5 border-t border-border flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground max-w-sm">
+            La suppression de votre compte efface définitivement vos deadlines et vos réglages.
+          </p>
+          <DeleteAccountButton/>
+        </div>
       </div>
     </div>
+  );
+}
+
+function DeleteAccountButton() {
+  const [busy, setBusy] = useState(false);
+  const remove = async () => {
+    if (!window.confirm("Supprimer définitivement votre compte et toutes vos deadlines ?")) return;
+    setBusy(true);
+    try {
+      await deleteMyAccount();
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch (e) {
+      toast.error("Suppression impossible", { description: e instanceof Error ? e.message : "" });
+      setBusy(false);
+    }
+  };
+  return (
+    <Button
+      variant="ghost"
+      onClick={() => { void remove(); }}
+      disabled={busy}
+      className="rounded-full text-brand-red hover:bg-brand-red/10 h-9 px-4 text-sm"
+    >
+      <Trash2 className="h-4 w-4 mr-2"/>{busy ? "Suppression…" : "Supprimer mon compte"}
+    </Button>
   );
 }
 
@@ -346,7 +383,7 @@ function SummaryCard() {
       </div>
 
       <p className="text-sm text-muted-foreground">
-        Envoi prévu à <span className="font-semibold text-foreground">{String(hour).padStart(2, "0")}h{String(minute).padStart(2, "0")}</span> (heure de Paris).
+        Envoi prévu à <span className="font-semibold text-foreground">{String(hour).padStart(2, "0")}h{String(minute).padStart(2, "0")}</span> ({(profile?.timezone ?? "Europe/Paris").split("/")[1]?.replace("_", " ") ?? "Paris"}).
       </p>
 
       <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -465,19 +502,19 @@ function BillingTab() {
 
   return (
     <div className="grid md:grid-cols-2 gap-4 max-w-4xl">
-      <div className={`rounded-2xl border p-6 bg-card ${!isPro ? "border-ink" : "border-border"}`}>
+      <div className={`flex flex-col rounded-2xl border p-6 bg-card ${!isPro ? "border-ink" : "border-border"}`}>
         {!isPro && <div className="text-xs font-semibold uppercase tracking-widest text-brand-blue mb-2">Votre plan</div>}
         <h3 className="font-display text-3xl font-extrabold">Gratuit</h3>
         <div className="mt-2 text-4xl font-bold">0 €<span className="text-base font-normal text-muted-foreground"> / mois</span></div>
-        <ul className="mt-6 space-y-2.5 text-sm">
+        <ul className="mt-6 mb-6 space-y-2.5 text-sm">
           {freeFeatures.map((f) => (
             <li key={f} className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green"/>{f}</li>
           ))}
         </ul>
-        <Button disabled variant="outline" className="w-full rounded-full mt-6">{isPro ? "Rétrograder" : "Plan actuel"}</Button>
+        <Button disabled variant="outline" className="w-full rounded-full mt-auto">{isPro ? "Rétrograder" : "Plan actuel"}</Button>
       </div>
 
-      <div className={`rounded-2xl border-2 p-6 bg-card relative ${isPro ? "border-ink" : "border-brand-blue"}`}>
+      <div className={`relative flex flex-col rounded-2xl border-2 p-6 bg-card ${isPro ? "border-ink" : "border-brand-blue"}`}>
         {isPro ? (
           <div className="text-xs font-semibold uppercase tracking-widest text-brand-blue mb-2">Votre plan</div>
         ) : (
@@ -485,7 +522,7 @@ function BillingTab() {
         )}
         <h3 className="font-display text-3xl font-extrabold">Pro</h3>
         <div className="mt-2 text-4xl font-bold">9 €<span className="text-base font-normal text-muted-foreground"> / mois</span></div>
-        <ul className="mt-6 space-y-2.5 text-sm">
+        <ul className="mt-6 mb-6 space-y-2.5 text-sm">
           {proFeatures.map((f) => (
             <li key={f} className="flex items-center gap-2"><Check className="h-4 w-4 text-brand-green"/>{f}</li>
           ))}
@@ -493,7 +530,7 @@ function BillingTab() {
         <Button
           onClick={upgrade}
           disabled={loading || isPro}
-          className={`w-full rounded-full mt-6 ${isPro ? "" : "bg-ink text-cream hover:bg-ink/90"}`}
+          className={`w-full rounded-full mt-auto ${isPro ? "" : "bg-ink text-cream hover:bg-ink/90"}`}
           variant={isPro ? "outline" : "default"}
         >
           {isPro ? "Abonnement actif" : loading ? "Redirection…" : "Passer au Pro — 9 €/mois"}

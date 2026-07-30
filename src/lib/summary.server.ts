@@ -133,12 +133,17 @@ interface DeadlineRow {
   status: string;
 }
 
-function toItems(rows: DeadlineRow[], todayStr: string, matchRules: boolean): SummaryItem[] {
+function toItems(
+  rows: DeadlineRow[],
+  todayStr: string,
+  matchRules: boolean,
+  tz = "Europe/Paris",
+): SummaryItem[] {
   return rows
     .map((d) => ({
       title: d.title,
       clientName: d.client_name,
-      daysAway: parisDaysBetween(todayStr, new Date(d.due_at)),
+      daysAway: parisDaysBetween(todayStr, new Date(d.due_at), tz),
       rules: (d.alert_rules as number[] | null) ?? [],
     }))
     .filter((d) => (matchRules ? d.rules.includes(d.daysAway) : d.daysAway >= 0 && d.daysAway <= 30))
@@ -161,18 +166,16 @@ export interface SummaryResult {
 
 export async function processDailySummaries(opts: SummaryOptions = {}): Promise<SummaryResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { tzHour, tzMinute, tzDateStr } = await import("@/lib/reminders.server");
   const now = new Date();
-  const hour = parisHour(now);
-  const minute = parisMinute(now);
-  const todayStr = parisDateStr(now);
-  const parisTime = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  const parisTime = `${String(parisHour(now)).padStart(2, "0")}:${String(parisMinute(now)).padStart(2, "0")}`;
 
-  console.log(`[summary] parisTime=${parisTime} date=${todayStr} force=${opts.force === true}`);
+  console.log(`[summary] parisTime=${parisTime} force=${opts.force === true}`);
 
   let q = supabaseAdmin
     .from("profiles")
     .select(
-      "id, display_name, telegram_chat_id, language, summary_enabled, summary_hour, summary_minute, summary_last_sent_on",
+      "id, display_name, telegram_chat_id, language, timezone, summary_enabled, summary_hour, summary_minute, summary_last_sent_on",
     )
     .not("telegram_chat_id", "is", null);
   if (opts.forceUserId) q = q.eq("id", opts.forceUserId);
@@ -189,14 +192,32 @@ export async function processDailySummaries(opts: SummaryOptions = {}): Promise<
       skipped++;
       continue;
     }
+
+    const tz = p.timezone ?? "Europe/Paris";
+    const todayStr = tzDateStr(now, tz);
+
     if (!opts.force) {
       const scheduled = (p.summary_hour ?? 9) * 60 + (p.summary_minute ?? 0);
-      const current = hour * 60 + minute;
+      const current = tzHour(now, tz) * 60 + tzMinute(now, tz);
+      // Envoi dès que l'heure planifiée est atteinte (le cron tourne toutes les 5 min),
+      // une seule fois par jour grâce au verrou summary_last_sent_on.
       if (current < scheduled) {
         skipped++;
         continue;
       }
       if (p.summary_last_sent_on === todayStr) {
+        skipped++;
+        continue;
+      }
+      // Réserve l'envoi de façon atomique pour éviter les doublons entre deux exécutions.
+      const { data: claimed, error: claimErr } = await supabaseAdmin
+        .from("profiles")
+        .update({ summary_last_sent_on: todayStr })
+        .eq("id", p.id)
+        .or(`summary_last_sent_on.is.null,summary_last_sent_on.neq.${todayStr}`)
+        .select("id");
+      if (claimErr) throw new Error(claimErr.message);
+      if (!claimed || claimed.length === 0) {
         skipped++;
         continue;
       }
@@ -209,22 +230,23 @@ export async function processDailySummaries(opts: SummaryOptions = {}): Promise<
       .neq("status", "completed");
     if (dErr) throw new Error(dErr.message);
 
-    const items = toItems((rows ?? []) as DeadlineRow[], todayStr, true);
+    const items = toItems((rows ?? []) as DeadlineRow[], todayStr, true, tz);
     const lang: Lang = p.language === "en" ? "en" : "fr";
     const name = p.display_name ?? (lang === "en" ? "there" : "à vous");
 
     try {
       await sendTelegram(p.telegram_chat_id, buildSummaryMessage({ name, items, lang, todayStr }));
       sent++;
-      if (!opts.force) {
-        await supabaseAdmin
-          .from("profiles")
-          .update({ summary_last_sent_on: todayStr })
-          .eq("id", p.id);
-      }
     } catch (e) {
       console.error(`[summary] send failed for ${p.id}`, e);
       skipped++;
+      if (!opts.force) {
+        // Libère le verrou pour permettre une nouvelle tentative au prochain passage.
+        await supabaseAdmin
+          .from("profiles")
+          .update({ summary_last_sent_on: null })
+          .eq("id", p.id);
+      }
     }
   }
 
