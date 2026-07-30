@@ -255,3 +255,110 @@
   .adp-dialog { opacity: 1; }
   .adp-type { max-width: 100%; }
 }
+
+/* ---------- Dashboard onboarding tutorial (Telegram) ---------- */
+@keyframes tuto-backdrop-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes tuto-panel-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97) }
+  to { opacity: 1; transform: translateY(0) scale(1) }
+}
+@keyframes tuto-copy-in {
+  from { opacity: 0; transform: translateY(8px) }
+  to { opacity: 1; transform: translateY(0) }
+}
+@keyframes tuto-scene-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.98) }
+  to { opacity: 1; transform: translateY(0) scale(1) }
+}
+@keyframes tuto-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.96) }
+  to { opacity: 1; transform: translateY(0) scale(1) }
+}
+@keyframes tuto-typing { from { width: 0 } to { width: 100% } }
+@keyframes tuto-blink { 0%, 45% { opacity: 1 } 50%, 100% { opacity: 0 } }
+
+.tuto-backdrop { animation: tuto-backdrop-in 0.35s ease-out both }
+.tuto-panel { animation: tuto-panel-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both }
+.tuto-copy { animation: tuto-copy-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both }
+.tuto-scene { animation: tuto-scene-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both }
+.tuto-pop-1 { animation: tuto-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.28s both }
+.tuto-pop-2 { animation: tuto-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) 0.62s both }
+
+.tuto-type {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  vertical-align: bottom;
+  animation: tuto-typing 1s steps(12, end) 0.15s both;
+}
+.tuto-type::after { content: attr(data-text) }
+.tuto-caret {
+  display: inline-block;
+  width: 1.5px;
+  height: 0.95em;
+  margin-left: 2px;
+  vertical-align: -0.1em;
+  background: currentColor;
+  animation: tuto-blink 1s steps(1, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tuto-backdrop, .tuto-panel, .tuto-copy, .tuto-scene,
+  .tuto-pop-1, .tuto-pop-2, .tuto-type, .tuto-caret {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ============================
+   Liquid glass (iOS 26 style) — mobile chrome
+   ============================ */
+.liquid-glass {
+  position: relative;
+  background: color-mix(in oklab, var(--card) 55%, transparent);
+  backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, white 60%, transparent) inset,
+    0 -1px 0 0 color-mix(in oklab, var(--foreground) 5%, transparent) inset,
+    0 18px 40px -18px color-mix(in oklab, var(--foreground) 35%, transparent);
+}
+.liquid-glass::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    150deg,
+    color-mix(in oklab, white 45%, transparent) 0%,
+    transparent 38%,
+    transparent 62%,
+    color-mix(in oklab, white 22%, transparent) 100%
+  );
+}
+.liquid-glass > * { position: relative; z-index: 1; }
+
+.liquid-pill {
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--card) 50%, transparent);
+  backdrop-filter: blur(24px) saturate(200%);
+  border: 1px solid color-mix(in oklab, white 55%, transparent);
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, white 70%, transparent) inset,
+    0 10px 24px -12px color-mix(in oklab, var(--foreground) 40%, transparent);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), background 0.25s ease;
+}
+.liquid-pill:active { transform: scale(0.94); }
+
+.liquid-tab-active {
+  background: color-mix(in oklab, var(--ink) 92%, transparent);
+  box-shadow:
+    0 1px 0 0 color-mix(in oklab, white 25%, transparent) inset,
+    0 8px 20px -8px color-mix(in oklab, var(--ink) 60%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .liquid-pill { transition: none; }
+}
