@@ -5,15 +5,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { useCreateDeadline } from "@/hooks/use-deadlines";
-import { ClipboardCheck } from "lucide-react";
+import { useT, type TKey } from "@/lib/i18n";
 import { toast } from "sonner";
 
-const REMINDER_PRESETS = [
-  { v: 30, label: "30 jours" },
-  { v: 14, label: "14 jours" },
-  { v: 7, label: "7 jours" },
-  { v: 1, label: "24h" },
-  { v: 0, label: "Le jour J" },
+const REMINDER_PRESETS: { v: number; key: TKey }[] = [
+  { v: 30, key: "dialog.preset.30" },
+  { v: 14, key: "dialog.preset.14" },
+  { v: 7, key: "dialog.preset.7" },
+  { v: 1, key: "dialog.preset.1" },
+  { v: 0, key: "dialog.preset.0" },
 ];
 
 const PRIORITY_COLOR: Record<string, string> = {
@@ -29,13 +29,14 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
   const [priority, setPriority] = useState("medium");
   const [alertRules, setAlertRules] = useState<number[]>([]);
   const create = useCreateDeadline();
+  const { t } = useT();
 
   const toggle = (v: number) =>
     setAlertRules((r) => (r.includes(v) ? r.filter((x) => x !== v) : [...r, v].sort((a, b) => b - a)));
 
   const submit = async () => {
     if (!title.trim() || !dueAt) {
-      toast.error("Titre et date requis");
+      toast.error(t("dialog.required"));
       return;
     }
     try {
@@ -47,12 +48,12 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
         alert_rules: alertRules,
         alert_hour: 9,
       });
-      toast.success("Deadline créée");
+      toast.success(t("dialog.created"));
       setOpen(false);
       setTitle(""); setDueAt("");
       setPriority("medium"); setAlertRules([]);
     } catch (e) {
-      toast.error("Erreur", { description: e instanceof Error ? e.message : "" });
+      toast.error(t("common.error"), { description: e instanceof Error ? e.message : "" });
     }
   };
 
@@ -61,36 +62,34 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="max-w-xl rounded-3xl p-6 md:p-8">
         <DialogHeader className="text-left">
-          <DialogTitle className="font-display text-2xl">Nouvelle deadline</DialogTitle>
-          <DialogDescription className="sr-only">
-            Créez une deadline avec une date, une priorité, des rappels et une heure d'envoi.
-          </DialogDescription>
+          <DialogTitle className="font-display text-2xl">{t("dialog.title")}</DialogTitle>
+          <DialogDescription className="sr-only">{t("dialog.desc")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-5">
           <div className="space-y-1.5">
-            <Label className="text-xs text-muted-foreground font-normal">Titre</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Renouvellement du domaine acme.com" className="h-12 rounded-full px-5"/>
+            <Label className="text-xs text-muted-foreground font-normal">{t("dialog.name")}</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("dialog.namePlaceholder")} className="h-12 rounded-full px-5"/>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground font-normal">Date</Label>
+              <Label className="text-xs text-muted-foreground font-normal">{t("dialog.date")}</Label>
               <Input type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} className="h-12 rounded-full px-5"/>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground font-normal">Priorité</Label>
+              <Label className="text-xs text-muted-foreground font-normal">{t("dialog.priority")}</Label>
               <Select value={priority} onValueChange={setPriority}>
                 <SelectTrigger className="h-12 rounded-full px-5"><SelectValue/></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Basse</SelectItem>
-                  <SelectItem value="medium">Moyenne</SelectItem>
-                  <SelectItem value="high">Haute</SelectItem>
+                  <SelectItem value="low">{t("dialog.priority.low")}</SelectItem>
+                  <SelectItem value="medium">{t("dialog.priority.medium")}</SelectItem>
+                  <SelectItem value="high">{t("dialog.priority.high")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="space-y-2 min-w-0">
-            <Label className="text-xs text-muted-foreground font-normal">Rappels</Label>
+            <Label className="text-xs text-muted-foreground font-normal">{t("dialog.reminders")}</Label>
             <div className="flex flex-wrap gap-2">
               {REMINDER_PRESETS.map((p) => {
                 const active = alertRules.includes(p.v);
@@ -100,17 +99,22 @@ export function NewDeadlineDialog({ trigger }: { trigger: ReactNode }) {
                     key={p.v}
                     onClick={() => toggle(p.v)}
                     className={`px-3 h-9 rounded-full text-xs font-semibold border transition ${active ? "bg-ink text-cream border-ink" : "bg-background border-border text-foreground hover:bg-secondary"}`}
-                  >{p.label}</button>
+                  >{t(p.key)}</button>
                 );
               })}
             </div>
           </div>
         </div>
-        <DialogFooter className="pt-4 gap-2 sm:gap-3">
-          <Button type="button" variant="outline" className="rounded-full h-11 px-5" onClick={() => setOpen(false)}>Annuler</Button>
-          <Button type="button" className="rounded-full h-11 px-5 bg-ink text-cream hover:bg-ink/90 gap-2" disabled={create.isPending} onClick={() => { void submit(); }}>
-            <ClipboardCheck className="h-4 w-4" />
-            {create.isPending ? "Création…" : "Créer la deadline"}
+        <DialogFooter className="pt-4 gap-2 sm:gap-2">
+          <Button variant="ghost" className="rounded-full h-11 px-5" onClick={() => setOpen(false)}>
+            {t("dialog.cancel")}
+          </Button>
+          <Button
+            className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-6"
+            onClick={() => void submit()}
+            disabled={create.isPending}
+          >
+            {create.isPending ? t("dialog.creating") : t("dialog.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

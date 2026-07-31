@@ -4,8 +4,9 @@ import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DeadlyLogo } from "@/components/DeadlyLogo";
-import { ArrowRight, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -35,6 +36,7 @@ function GoogleIcon() {
 function AuthPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const { t } = useT();
 
   useEffect(() => {
     // If already signed in, bounce to dashboard
@@ -50,11 +52,10 @@ function AuthPage() {
     });
     if (result.error) {
       setLoading(false);
-      toast.error("Impossible de se connecter", { description: result.error.message });
+      toast.error(t("auth.failed"), { description: result.error.message });
       return;
     }
     if (result.redirected) return;
-    // popup path — session set
     navigate({ to: "/dashboard" });
   };
 
@@ -64,11 +65,9 @@ function AuthPage() {
         <DeadlyLogo variant="light" />
         <div>
           <h2 className="font-display text-5xl font-extrabold tracking-tight leading-[1.05]">
-            Renouvelez à temps.<br/>À chaque fois.
+            {t("landing.h1a")}<br/>{t("landing.h1b")}
           </h2>
-          <p className="mt-6 text-cream/70 max-w-md">
-            Deadly centralise les échéances de tous vos clients et prévient votre équipe avant qu'une seule ne soit oubliée.
-          </p>
+          <p className="mt-6 text-cream/70 max-w-md">{t("auth.sideText")}</p>
         </div>
         <p className="text-sm text-cream/50">© 2026 Deadly</p>
       </div>
@@ -76,8 +75,8 @@ function AuthPage() {
         <div className="w-full max-w-sm space-y-8">
           <div className="lg:hidden"><DeadlyLogo /></div>
           <div>
-            <h1 className="font-display text-3xl font-extrabold tracking-tight">Bienvenue</h1>
-            <p className="text-muted-foreground mt-1 text-sm">Connectez-vous ou créez votre compte en un clic.</p>
+            <h1 className="font-display text-3xl font-extrabold tracking-tight">{t("auth.welcome")}</h1>
+            <p className="text-muted-foreground mt-1 text-sm">{t("auth.sub")}</p>
           </div>
           <Button
             onClick={signIn}
@@ -85,14 +84,12 @@ function AuthPage() {
             className="w-full h-12 rounded-full bg-ink text-cream hover:bg-ink/90 gap-3 text-base font-semibold"
           >
             {loading ? <Loader2 className="h-5 w-5 animate-spin"/> : <GoogleIcon/>}
-            Continuer avec Google
+            {t("auth.google")}
           </Button>
-          <p className="text-xs text-muted-foreground text-center">
-            En continuant, vous acceptez nos conditions d'utilisation et notre politique de confidentialité.
-          </p>
+          <p className="text-xs text-muted-foreground text-center">{t("auth.legal")}</p>
           <div className="pt-4 text-center">
             <a href="/" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
-              ← Retour à l'accueil
+              {t("auth.back")}
             </a>
           </div>
         </div>

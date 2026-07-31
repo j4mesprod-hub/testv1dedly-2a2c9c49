@@ -6,7 +6,20 @@ function reminderText(opts: {
   category: string | null;
   dueDateStr: string;
   daysAway: number;
+  lang: "fr" | "en";
 }) {
+  if (opts.lang === "en") {
+    const when =
+      opts.daysAway === 0 ? "today" : `in ${opts.daysAway} day${opts.daysAway > 1 ? "s" : ""}`;
+    const catLine = opts.category ? `\nCategory: ${opts.category}` : "";
+    return (
+      `⚠️ *ACTION REQUIRED*\n\n` +
+      `*${opts.title}* expires ${when}.\n` +
+      `Client: ${opts.clientName}${catLine}\n` +
+      `Expiry date: ${opts.dueDateStr}\n` +
+      `Days left: ${opts.daysAway}`
+    );
+  }
   const when =
     opts.daysAway === 0
       ? "aujourd'hui"
@@ -137,7 +150,7 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
 
   let profilesQuery = supabaseAdmin
     .from("profiles")
-    .select("id, display_name, telegram_chat_id, timezone")
+    .select("id, display_name, telegram_chat_id, timezone, language")
     .not("telegram_chat_id", "is", null);
   // Le filtre abonnement ne s'applique qu'aux envois automatiques globaux.
   if (!opts.forceUserId) profilesQuery = profilesQuery.eq("has_active_sub", true);
@@ -154,6 +167,7 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
     if (chatId === null || chatId === undefined) continue;
 
     const tz = profile.timezone ?? "Europe/Paris";
+    const lang: "fr" | "en" = profile.language === "en" ? "en" : "fr";
     const userHour = opts.overrideHour ?? tzHour(now, tz);
     const userDateStr = tzDateStr(now, tz);
 
@@ -184,7 +198,7 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
 
       if (!dryRun && sent.includes(combo)) continue;
 
-      const dueDateStr = dueDate.toLocaleDateString("fr-FR", {
+      const dueDateStr = dueDate.toLocaleDateString(lang === "en" ? "en-GB" : "fr-FR", {
         timeZone: tz,
         day: "2-digit",
         month: "long",
@@ -201,6 +215,7 @@ export async function processReminders(opts: ProcessOptions = {}): Promise<Proce
             category: d.category,
             dueDateStr,
             daysAway,
+            lang,
           }),
         );
 
