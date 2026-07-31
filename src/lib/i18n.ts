@@ -83,6 +83,7 @@ export const dict = {
   },
   "overview.summaryEnabled": { fr: "Résumé quotidien activé", en: "Daily summary enabled" },
   "overview.summaryDisabled": { fr: "Résumé quotidien désactivé", en: "Daily summary disabled" },
+  "overview.daysLate": { fr: "j de retard", en: "d overdue" },
 
   /* ---------------- deadlines list ---------------- */
   "tasks.title": { fr: "Deadlines", en: "Deadlines" },
