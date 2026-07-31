@@ -24,7 +24,6 @@ import { useDeadlines, type Deadline } from "@/hooks/use-deadlines";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { NewDeadlineDialog } from "@/components/NewDeadlineDialog";
 import { formatDistanceToNow, format, subDays, startOfDay, differenceInCalendarDays } from "date-fns";
-import type { Locale } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
