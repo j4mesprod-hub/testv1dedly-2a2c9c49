@@ -45,19 +45,23 @@ function AuthPage() {
     });
   }, [navigate]);
 
-  const signIn = async () => {
-    setLoading(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/auth/callback",
+const signIn = async () => {
+  setLoading(true);
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: window.location.origin + "/auth/callback",
+    },
+  });
+
+  if (error) {
+    setLoading(false);
+    toast.error(t("auth.failed"), {
+      description: error.message,
     });
-    if (result.error) {
-      setLoading(false);
-      toast.error(t("auth.failed"), { description: result.error.message });
-      return;
-    }
-    if (result.redirected) return;
-    navigate({ to: "/dashboard" });
-  };
+  }
+};
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
