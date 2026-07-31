@@ -3,7 +3,7 @@ import { DashboardShell } from "@/components/DashboardShell";
 import { useDeadlines } from "@/hooks/use-deadlines";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
 import { format, startOfMonth, subMonths } from "date-fns";
-import { fr } from "date-fns/locale";
+import { useT } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/dashboard/stats")({
   head: () => ({
@@ -23,6 +23,7 @@ const COLORS = { upcoming: "var(--brand-blue)", in_progress: "var(--brand-orange
 
 function Stats() {
   const { data: items = [] } = useDeadlines();
+  const { t, dateLocale } = useT();
 
   const total = items.length;
   const completed = items.filter((i) => i.status === "completed").length;
@@ -30,7 +31,7 @@ function Stats() {
   const rate = total ? Math.round((completed / total) * 100) : 0;
 
   const pieData = (["upcoming", "in_progress", "completed", "overdue"] as const).map((s) => ({
-    name: s === "upcoming" ? "À venir" : s === "in_progress" ? "En cours" : s === "completed" ? "Respectées" : "En retard",
+    name: t(`status.${s}` as const),
     value: items.filter((i) => i.status === s).length,
     fill: COLORS[s],
   }));
@@ -39,29 +40,29 @@ function Stats() {
     const m = startOfMonth(subMonths(new Date(), 5 - i));
     const next = startOfMonth(subMonths(new Date(), 4 - i));
     const inMonth = items.filter((x) => {
-      const t = new Date(x.due_at).getTime();
-      return t >= m.getTime() && t < next.getTime();
+      const ts = new Date(x.due_at).getTime();
+      return ts >= m.getTime() && ts < next.getTime();
     });
     return {
-      m: format(m, "MMM", { locale: fr }),
+      m: format(m, "MMM", { locale: dateLocale }),
       respected: inMonth.filter((x) => x.status === "completed").length,
       missed: inMonth.filter((x) => x.status === "overdue").length,
     };
   });
 
   return (
-    <DashboardShell title="Statistiques" subtitle="Votre performance en un coup d'œil.">
+    <DashboardShell title={t("stats.title")} subtitle={t("stats.subtitle")}>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <BigStat label="Taux de réussite" value={`${rate}%`} tone="green"/>
-        <BigStat label="Deadlines totales" value={total} tone="blue"/>
-        <BigStat label="Respectées" value={completed} tone="green"/>
-        <BigStat label="Manquées" value={overdue} tone="red"/>
+        <BigStat label={t("stats.rate")} value={`${rate}%`} tone="green"/>
+        <BigStat label={t("stats.total")} value={total} tone="blue"/>
+        <BigStat label={t("stats.completed")} value={completed} tone="green"/>
+        <BigStat label={t("stats.missed")} value={overdue} tone="red"/>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <div className="rounded-2xl bg-card border border-border p-6">
-          <h3 className="font-display text-xl font-bold mb-1">Historique 6 mois</h3>
-          <p className="text-sm text-muted-foreground mb-4">Respectées vs manquées</p>
+          <h3 className="font-display text-xl font-bold mb-1">{t("stats.history")}</h3>
+          <p className="text-sm text-muted-foreground mb-4">{t("stats.historySub")}</p>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={months}>
@@ -77,8 +78,8 @@ function Stats() {
         </div>
 
         <div className="rounded-2xl bg-card border border-border p-6">
-          <h3 className="font-display text-xl font-bold mb-1">Répartition par statut</h3>
-          <p className="text-sm text-muted-foreground mb-4">Vue d'ensemble de vos deadlines</p>
+          <h3 className="font-display text-xl font-bold mb-1">{t("stats.breakdown")}</h3>
+          <p className="text-sm text-muted-foreground mb-4">{t("stats.breakdownSub")}</p>
           <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
