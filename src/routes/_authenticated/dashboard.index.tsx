@@ -17,14 +17,14 @@ import {
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { useT } from "@/lib/i18n";
+import { useT, type TKey } from "@/lib/i18n";
 import { sendDailySummaryNow } from "@/lib/telegram.functions";
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, CartesianGrid } from "recharts";
 import { useDeadlines, type Deadline } from "@/hooks/use-deadlines";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { NewDeadlineDialog } from "@/components/NewDeadlineDialog";
 import { formatDistanceToNow, format, subDays, startOfDay, differenceInCalendarDays } from "date-fns";
-import { fr } from "date-fns/locale";
+import type { Locale } from "date-fns";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
@@ -48,12 +48,12 @@ function categoryIcon(d: Deadline) {
   return Globe;
 }
 
-function daysLabel(due: string) {
+function daysLabel(due: string, t: (k: TKey) => string) {
   const n = differenceInCalendarDays(new Date(due), new Date());
-  if (n < 0) return { text: `${Math.abs(n)} j de retard`, tone: "red" as const };
-  if (n === 0) return { text: "Aujourd'hui", tone: "red" as const };
-  if (n <= 7) return { text: `${n} jours`, tone: "yellow" as const };
-  return { text: `${n} jours`, tone: "green" as const };
+  if (n < 0) return { text: `${Math.abs(n)} ${t("overview.daysLate")}`, tone: "red" as const };
+  if (n === 0) return { text: t("common.today"), tone: "red" as const };
+  if (n <= 7) return { text: `${n} ${t("common.days")}`, tone: "yellow" as const };
+  return { text: `${n} ${t("common.days")}`, tone: "green" as const };
 }
 
 const TONE_TEXT = {
@@ -72,7 +72,7 @@ function Overview() {
   const { data: deadlines = [], isLoading } = useDeadlines();
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
-  const { t, lang } = useT();
+  const { t, dateLocale } = useT();
   const [summaryBusy, setSummaryBusy] = useState(false);
   const firstName = (profile?.display_name ?? "").split(" ")[0];
 
@@ -87,7 +87,7 @@ function Overview() {
   const days = Array.from({ length: 7 }).map((_, i) => {
     const d = startOfDay(subDays(new Date(), 6 - i));
     return {
-      d: format(d, "EEE", { locale: lang === "en" ? undefined : fr }),
+      d: format(d, "EEE", { locale: dateLocale }),
       v: deadlines.filter(
         (x) => x.completed_at && startOfDay(new Date(x.completed_at)).getTime() === d.getTime(),
       ).length,
@@ -106,7 +106,7 @@ function Overview() {
       await sendDailySummaryNow();
       toast.success(t("summary.sent"));
     } catch (e) {
-      toast.error("Envoi impossible", { description: e instanceof Error ? e.message : "" });
+      toast.error(t("common.sendFailed"), { description: e instanceof Error ? e.message : "" });
     } finally {
       setSummaryBusy(false);
     }
@@ -115,7 +115,7 @@ function Overview() {
   const toggleSummary = (v: boolean) => {
     updateProfile.mutate(
       { summary_enabled: v },
-      { onSuccess: () => toast.success(v ? "Résumé quotidien activé" : "Résumé quotidien désactivé") },
+      { onSuccess: () => toast.success(t(v ? "overview.summaryEnabled" : "overview.summaryDisabled")) },
     );
   };
 
@@ -154,7 +154,7 @@ function Overview() {
             {firstName ? ` ${firstName}` : ""},
           </p>
           <h1 className="mt-1 text-balance font-display text-[26px] font-extrabold leading-tight tracking-tight">
-            {overdue > 0 ? "quelques échéances demandent votre attention." : "tout est sous contrôle."}
+            {overdue > 0 ? t("overview.needsAttention") : t("overview.allUnderControl")}
           </h1>
         </div>
 
@@ -165,16 +165,16 @@ function Overview() {
         ) : (
           <>
             <div className="mt-5 grid grid-cols-3 gap-3">
-              <MobileKpi value={healthy} label="Tout va bien" tone="green" icon={<CheckCircle2 className="h-4 w-4" />} />
-              <MobileKpi value={upcoming + inProgress} label="À venir" tone="yellow" icon={<Clock className="h-4 w-4" />} />
-              <MobileKpi value={overdue} label="Expirés" tone="red" icon={<AlertTriangle className="h-4 w-4" />} />
+              <MobileKpi value={healthy} label={t("overview.kpi.healthy")} tone="green" icon={<CheckCircle2 className="h-4 w-4" />} />
+              <MobileKpi value={upcoming + inProgress} label={t("overview.kpi.upcoming")} tone="yellow" icon={<Clock className="h-4 w-4" />} />
+              <MobileKpi value={overdue} label={t("overview.kpi.expired")} tone="red" icon={<AlertTriangle className="h-4 w-4" />} />
             </div>
 
             <section className="mt-6">
               <div className="mb-3 flex items-baseline justify-between">
-                <h2 className="font-display text-lg font-extrabold">Prochaines échéances</h2>
+                <h2 className="font-display text-lg font-extrabold">{t("overview.nextDeadlines")}</h2>
                 <Link to="/dashboard/tasks" className="text-xs font-semibold text-muted-foreground">
-                  Tout voir
+                  {t("common.seeAll")}
                 </Link>
               </div>
               <div className="space-y-2.5">
@@ -185,7 +185,7 @@ function Overview() {
                 )}
                 {next.map((d) => {
                   const Icon = categoryIcon(d);
-                  const l = daysLabel(d.due_at);
+                  const l = daysLabel(d.due_at, t);
                   return (
                     <div
                       key={d.id}
@@ -197,7 +197,7 @@ function Overview() {
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-bold">{d.title}</div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {d.category ?? d.client_name ?? format(new Date(d.due_at), "d MMM yyyy", { locale: fr })}
+                          {d.category ?? d.client_name ?? format(new Date(d.due_at), "d MMM yyyy", { locale: dateLocale })}
                         </div>
                       </div>
                       <div className={cn("shrink-0 text-right text-xs font-bold", TONE_TEXT[l.tone])}>{l.text}</div>
@@ -217,8 +217,8 @@ function Overview() {
                   <div className="mt-1 font-display text-base font-extrabold">{t("summary.title")}</div>
                   <p className="mt-1 text-xs leading-relaxed text-cream/70">
                     {profile?.telegram_chat_id
-                      ? `Envoyé chaque jour à ${String(profile.summary_hour).padStart(2, "0")}:${String(profile.summary_minute).padStart(2, "0")}.`
-                      : "Liez votre compte pour recevoir vos échéances chaque matin."}
+                      ? `${t("summary.sentDaily")} ${String(profile.summary_hour).padStart(2, "0")}:${String(profile.summary_minute).padStart(2, "0")}.`
+                      : t("overview.telegramLinkText")}
                   </p>
                 </div>
                 {profile?.telegram_chat_id ? (
@@ -229,7 +229,7 @@ function Overview() {
                     search={{ tab: "notifications" } as never}
                     className="grid h-10 shrink-0 place-items-center rounded-full bg-cream px-4 text-xs font-bold text-ink"
                   >
-                    Lier
+                    {t("common.link")}
                   </Link>
                 )}
               </div>
@@ -257,22 +257,22 @@ function Overview() {
               <StatusCard
                 tone="green"
                 value={healthy}
-                title="Tout va bien"
-                text="Échéances à plus de 7 jours"
+                title={t("overview.kpi.healthy")}
+                text={t("overview.kpi.healthyText")}
                 icon={<CheckCircle2 className="h-5 w-5" />}
               />
               <StatusCard
                 tone="yellow"
                 value={upcoming + inProgress}
                 title={t("overview.kpi.upcoming")}
-                text="À traiter prochainement"
+                text={t("overview.kpi.upcomingText")}
                 icon={<CalIcon className="h-5 w-5" />}
               />
               <StatusCard
                 tone="red"
                 value={overdue}
-                title="Expirés"
-                text="Action immédiate requise"
+                title={t("overview.kpi.expired")}
+                text={t("overview.kpi.expiredText")}
                 icon={<AlertTriangle className="h-5 w-5" />}
               />
             </div>
@@ -281,14 +281,14 @@ function Overview() {
               <section className="rounded-3xl border border-border bg-card p-6 xl:col-span-2">
                 <div className="mb-4 flex items-center justify-between">
                   <div>
-                    <h3 className="font-display text-xl font-extrabold">Dernières deadlines</h3>
-                    <p className="text-sm text-muted-foreground">Vos échéances les plus proches</p>
+                    <h3 className="font-display text-xl font-extrabold">{t("overview.latest")}</h3>
+                    <p className="text-sm text-muted-foreground">{t("overview.latestSub")}</p>
                   </div>
                   <Link
                     to="/dashboard/tasks"
                     className="inline-flex h-9 items-center gap-1 rounded-full bg-secondary px-4 text-xs font-bold transition hover:bg-accent"
                   >
-                    Tout voir <ArrowUpRight className="h-3.5 w-3.5" />
+                    {t("common.seeAll")} <ArrowUpRight className="h-3.5 w-3.5" />
                   </Link>
                 </div>
                 <div className="divide-y divide-border">
@@ -297,7 +297,7 @@ function Overview() {
                   )}
                   {next.map((d) => {
                     const Icon = categoryIcon(d);
-                    const l = daysLabel(d.due_at);
+                    const l = daysLabel(d.due_at, t);
                     return (
                       <div key={d.id} className="flex items-center gap-4 py-3.5">
                         <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-2xl", TONE_BG[l.tone])}>
@@ -306,12 +306,12 @@ function Overview() {
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-bold">{d.title}</div>
                           <div className="truncate text-xs text-muted-foreground">
-                            {d.client_name ?? d.category ?? "Deadline"} ·{" "}
-                            {formatDistanceToNow(new Date(d.due_at), { addSuffix: true, locale: fr })}
+                            {d.client_name ?? d.category ?? t("common.deadline")} ·{" "}
+                            {formatDistanceToNow(new Date(d.due_at), { addSuffix: true, locale: dateLocale })}
                           </div>
                         </div>
                         <div className="hidden text-xs text-muted-foreground sm:block">
-                          {format(new Date(d.due_at), "d MMM yyyy", { locale: fr })}
+                          {format(new Date(d.due_at), "d MMM yyyy", { locale: dateLocale })}
                         </div>
                         <span className={cn("rounded-full px-3 py-1 text-xs font-bold", TONE_BG[l.tone])}>{l.text}</span>
                       </div>
@@ -321,10 +321,10 @@ function Overview() {
               </section>
 
               <section className="rounded-3xl border border-border bg-card p-6">
-                <h3 className="font-display text-xl font-extrabold">Progression</h3>
-                <p className="text-sm text-muted-foreground">Deadlines respectées</p>
+                <h3 className="font-display text-xl font-extrabold">{t("overview.progress")}</h3>
+                <p className="text-sm text-muted-foreground">{t("overview.progressSub")}</p>
                 <div className="mt-6 grid place-items-center">
-                  <Donut value={ratio} />
+                  <Donut value={ratio} label={t("overview.completedShort")} />
                 </div>
                 <div className="mt-6 space-y-2 text-sm">
                   <Row label={t("overview.kpi.completed")} value={completed} dot="bg-brand-green" />
@@ -420,7 +420,7 @@ function Row({ label, value, dot }: { label: string; value: number; dot: string 
   );
 }
 
-function Donut({ value }: { value: number }) {
+function Donut({ value, label }: { value: number; label: string }) {
   const r = 54;
   const c = 2 * Math.PI * r;
   return (
@@ -442,7 +442,7 @@ function Donut({ value }: { value: number }) {
       <div className="absolute inset-0 grid place-items-center">
         <div className="text-center">
           <div className="font-display text-3xl font-extrabold leading-none">{value}%</div>
-          <div className="text-[11px] font-semibold text-muted-foreground">respectées</div>
+          <div className="text-[11px] font-semibold text-muted-foreground">{label}</div>
         </div>
       </div>
     </div>
