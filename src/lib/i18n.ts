@@ -362,8 +362,15 @@ function storedLang(): Lang | null {
  */
 export function useLang(): Lang {
   const { data: profile } = useProfile();
+  const [fallback, setFallback] = useState<Lang>("fr");
   const profileLang: Lang | null =
     profile?.language === "en" ? "en" : profile?.language === "fr" ? "fr" : null;
+
+  // Lu après hydratation pour éviter tout mismatch SSR.
+  useEffect(() => {
+    const s = storedLang();
+    if (s) setFallback(s);
+  }, []);
 
   useEffect(() => {
     if (profileLang && typeof window !== "undefined") {
@@ -371,8 +378,9 @@ export function useLang(): Lang {
     }
   }, [profileLang]);
 
-  return profileLang ?? storedLang() ?? "fr";
+  return profileLang ?? fallback;
 }
+
 
 export function useT() {
   const lang = useLang();
