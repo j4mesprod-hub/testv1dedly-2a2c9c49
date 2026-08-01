@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { processReminders } from "@/lib/reminders.server";
 import { processDailySummaries } from "@/lib/summary.server";
+import { SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/env";
 
 async function authorize(request: Request): Promise<Response | null> {
   const expected = process.env.CRON_SECRET;
@@ -9,11 +10,7 @@ async function authorize(request: Request): Promise<Response | null> {
   if (expected && token === expected) return null;
 
   const apikey = request.headers.get("apikey") ?? "";
-  const publishableKey =
-    process.env.SUPABASE_PUBLISHABLE_KEY ??
-    process.env.SUPABASE_ANON_KEY ??
-    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const publishableKey = SUPABASE_PUBLISHABLE_KEY;
   if (publishableKey && (apikey === publishableKey || token === publishableKey)) return null;
 
   return new Response(JSON.stringify({ error: "Unauthorized" }), {
