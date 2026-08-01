@@ -4,7 +4,8 @@ import { Send, Search, MessageSquare, KeyRound, Check, X, ArrowRight } from "luc
 import { useProfile } from "@/hooks/use-profile";
 import { cn } from "@/lib/utils";
 
-const STORAGE_KEY = "deadly.onboarding.telegram.v1";
+const STORAGE_PREFIX = "deadly.onboarding.telegram.v1";
+const storageKey = (userId?: string) => (userId ? `${STORAGE_PREFIX}:${userId}` : STORAGE_PREFIX);
 export const BOT_USERNAME = "DeadlyAlertBot";
 
 type Step = {
