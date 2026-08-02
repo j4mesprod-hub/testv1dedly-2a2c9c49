@@ -82,22 +82,24 @@ function ProfileTab() {
   const { data: profile, isLoading } = useProfile();
   const update = useUpdateProfile();
   const [displayName, setDisplayName] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
   const [timezone, setTimezone] = useState("Europe/Paris");
   const [language, setLanguage] = useState("fr");
 
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name ?? "");
-      setAvatarUrl(profile.avatar_url ?? "");
       setTimezone(profile.timezone ?? "Europe/Paris");
       setLanguage(profile.language ?? "fr");
     }
   }, [profile]);
 
   const save = async () => {
-    await update.mutateAsync({ display_name: displayName || null, avatar_url: avatarUrl || null, timezone, language });
-    toast.success("Profil mis à jour");
+    try {
+      await update.mutateAsync({ display_name: displayName || null, timezone, language });
+      toast.success("Profil mis à jour");
+    } catch (e) {
+      toast.error("Enregistrement impossible", { description: e instanceof Error ? e.message : "" });
+    }
   };
 
   if (isLoading) return <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Chargement…</div>;
@@ -109,28 +111,16 @@ function ProfileTab() {
           <h3 className="font-display text-xl font-bold mb-1">Informations personnelles</h3>
           <p className="text-sm text-muted-foreground">Personnalisez votre profil.</p>
         </div>
-        <div className="flex items-center gap-4">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="h-16 w-16 rounded-full object-cover"/>
-          ) : (
-            <div className="h-16 w-16 rounded-full bg-brand-orange/80 grid place-items-center text-ink font-bold text-xl">
-              {(displayName || profile?.reminder_email || "?")[0]?.toUpperCase()}
-            </div>
-          )}
-          <div className="flex-1 space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">URL avatar</Label>
-            <Input value={avatarUrl} onChange={(e)=>setAvatarUrl(e.target.value)} placeholder="https://…" className="h-10 rounded-xl"/>
-          </div>
-        </div>
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Nom d'affichage</Label>
             <Input value={displayName} onChange={(e)=>setDisplayName(e.target.value)} className="h-10 rounded-xl"/>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-medium text-muted-foreground">Email de connexion</Label>
-            <Input value={profile?.reminder_email ?? ""} disabled className="h-10 rounded-xl"/>
+            <Label className="text-xs font-medium text-muted-foreground">Email du compte</Label>
+            <Input value={profile?.email ?? profile?.reminder_email ?? ""} disabled className="h-10 rounded-xl"/>
           </div>
+
           <div className="space-y-1.5">
             <Label className="text-xs font-medium text-muted-foreground">Langue / Language</Label>
             <Select value={language} onValueChange={setLanguage}>

@@ -274,8 +274,9 @@ export function DashboardShell({
                     <DropdownMenuLabel className="truncate">
                       {profile?.display_name ?? t("common.user")}
                       <div className="truncate text-xs font-normal text-muted-foreground">
-                        {profile?.reminder_email}
+                        {profile?.email ?? profile?.reminder_email}
                       </div>
+
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
