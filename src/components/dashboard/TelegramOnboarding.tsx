@@ -4,8 +4,7 @@ import { Send, Search, MessageSquare, KeyRound, Check, X, ArrowRight } from "luc
 import { useProfile } from "@/hooks/use-profile";
 import { cn } from "@/lib/utils";
 
-const STORAGE_PREFIX = "deadly.onboarding.telegram.v2";
-const storageKey = (userId?: string) => (userId ? `${STORAGE_PREFIX}:${userId}` : STORAGE_PREFIX);
+const STORAGE_KEY = "deadly.onboarding.telegram.v1";
 export const BOT_USERNAME = "DeadlyAlertBot";
 
 type Step = {
@@ -118,30 +117,19 @@ export function TelegramOnboarding() {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
 
-  const key = storageKey(profile?.id);
-
   useEffect(() => {
-    if (isLoading || typeof window === "undefined" || !profile?.id) return;
-    if (localStorage.getItem(storageKey(profile.id))) return;
-    if (profile.telegram_chat_id) {
-      localStorage.setItem(storageKey(profile.id), "1");
+    if (isLoading || typeof window === "undefined") return;
+    if (localStorage.getItem(STORAGE_KEY)) return;
+    if (profile?.telegram_chat_id) {
+      localStorage.setItem(STORAGE_KEY, "1");
       return;
     }
     const id = window.setTimeout(() => setOpen(true), 500);
     return () => window.clearTimeout(id);
-  }, [isLoading, profile?.id, profile?.telegram_chat_id]);
-
-  useEffect(() => {
-    const reopen = () => {
-      setStep(0);
-      setOpen(true);
-    };
-    window.addEventListener("deadly:open-telegram-tutorial", reopen);
-    return () => window.removeEventListener("deadly:open-telegram-tutorial", reopen);
-  }, []);
+  }, [isLoading, profile?.telegram_chat_id]);
 
   const close = () => {
-    if (typeof window !== "undefined") localStorage.setItem(key, "1");
+    if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, "1");
     setOpen(false);
   };
 

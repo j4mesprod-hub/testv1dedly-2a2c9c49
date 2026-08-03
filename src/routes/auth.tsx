@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DeadlyLogo } from "@/components/DeadlyLogo";
@@ -7,12 +8,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 
-export const Route = createFileRoute("/auth/")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    next: typeof search.next === "string" && search.next.startsWith("/") && !search.next.startsWith("//")
-      ? search.next
-      : "/dashboard",
-  }),
+export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Connexion Deadly" },
@@ -39,43 +35,29 @@ function GoogleIcon() {
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { next } = Route.useSearch();
   const [loading, setLoading] = useState(false);
   const { t } = useT();
 
   useEffect(() => {
     // If already signed in, bounce to dashboard
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) window.location.assign(next);
+      if (data.user) navigate({ to: "/dashboard" });
     });
-  }, [navigate, next]);
+  }, [navigate]);
 
-const signIn = async () => {
-  setLoading(true);
-
-  const callbackOrigin = window.location.hostname === "localhost"
-    ? window.location.origin
-    : "https://dedly.co";
-  const callbackUrl = new URL("/auth/callback", callbackOrigin);
-  callbackUrl.searchParams.set("next", next);
-
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: callbackUrl.toString(),
-      queryParams: {
-        prompt: "select_account",
-      },
-    },
-  });
-
-  if (error) {
-    setLoading(false);
-    toast.error(t("auth.failed"), {
-      description: error.message,
+  const signIn = async () => {
+    setLoading(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin + "/auth/callback",
     });
-  }
-};
+    if (result.error) {
+      setLoading(false);
+      toast.error(t("auth.failed"), { description: result.error.message });
+      return;
+    }
+    if (result.redirected) return;
+    navigate({ to: "/dashboard" });
+  };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">

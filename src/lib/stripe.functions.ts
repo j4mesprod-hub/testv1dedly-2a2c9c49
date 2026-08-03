@@ -2,6 +2,60 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+const STRIPE_API = "https://api.stripe.com/v1";
+
+/** Encode a nested object into Stripe's form-urlencoded bracket notation. */
+function encodeStripe(obj: Record<string, unknown>, prefix = ""): string {
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(obj)) {
+    const key = prefix ? `${prefix}[${k}]` : k;
+    if (v === undefined || v === null) continue;
+    if (typeof v === "object" && !Array.isArray(v)) {
+      parts.push(encodeStripe(v as Record<string, unknown>, key));
+    } else if (Array.isArray(v)) {
+      v.forEach((item, i) => {
+        if (typeof item === "object" && item !== null) {
+          parts.push(encodeStripe(item as Record<string, unknown>, `${key}[${i}]`));
+        } else {
+          parts.push(`${encodeURIComponent(`${key}[${i}]`)}=${encodeURIComponent(String(item))}`);
+        }
+      });
+    } else {
+      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(v))}`);
+    }
+  }
+  return parts.filter(Boolean).join("&");
+}
+
+async function stripeCall<T = unknown>(path: string, body: Record<string, unknown>): Promise<T> {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
+  const res = await fetch(`${STRIPE_API}${path}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: encodeStripe(body),
+  });
+  const json = (await res.json()) as { error?: { message?: string } } & Record<string, unknown>;
+  if (!res.ok) {
+    throw new Error(json?.error?.message || `Stripe error ${res.status}`);
+  }
+  return json as T;
+}
+
+async function stripeGet<T = unknown>(path: string): Promise<T> {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
+  const res = await fetch(`${STRIPE_API}${path}`, {
+    headers: { Authorization: `Bearer ${key}` },
+  });
+  const json = (await res.json()) as { error?: { message?: string } } & Record<string, unknown>;
+  if (!res.ok) throw new Error(json?.error?.message || `Stripe error ${res.status}`);
+  return json as T;
+}
+
 /** Create a Stripe Checkout Session for the Pro plan and return the redirect URL. */
 export const createProCheckout = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -12,8 +66,7 @@ export const createProCheckout = createServerFn({ method: "POST" })
     const { userId, claims } = context;
     const email = (claims as { email?: string }).email;
 
-    const { stripePost } = await import("@/lib/stripe.server");
-    const session = await stripePost<{ id: string; url: string }>("/checkout/sessions", {
+    const session = await stripeCall<{ id: string; url: string }>("/checkout/sessions", {
       mode: "subscription",
       "line_items[0][price_data][currency]": "eur",
       "line_items[0][price_data][unit_amount]": 900,
@@ -40,7 +93,6 @@ export const syncProAfterCheckout = createServerFn({ method: "POST" })
     z.object({ sessionId: z.string().min(1) }).parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { stripeGet } = await import("@/lib/stripe.server");
     const session = await stripeGet<{
       payment_status: string;
       status: string;
