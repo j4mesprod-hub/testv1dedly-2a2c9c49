@@ -7,7 +7,12 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 
-export const Route = createFileRoute("/auth")({
+export const Route = createFileRoute("/auth/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    next: typeof search.next === "string" && search.next.startsWith("/") && !search.next.startsWith("//")
+      ? search.next
+      : "/dashboard",
+  }),
   head: () => ({
     meta: [
       { title: "Connexion Deadly" },
@@ -34,23 +39,33 @@ function GoogleIcon() {
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
   const [loading, setLoading] = useState(false);
   const { t } = useT();
 
   useEffect(() => {
     // If already signed in, bounce to dashboard
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/dashboard" });
+      if (data.user) window.location.assign(next);
     });
-  }, [navigate]);
+  }, [navigate, next]);
 
 const signIn = async () => {
   setLoading(true);
 
+  const callbackOrigin = window.location.hostname === "localhost"
+    ? window.location.origin
+    : "https://dedly.co";
+  const callbackUrl = new URL("/auth/callback", callbackOrigin);
+  callbackUrl.searchParams.set("next", next);
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: window.location.origin + "/auth/callback",
+      redirectTo: callbackUrl.toString(),
+      queryParams: {
+        prompt: "select_account",
+      },
     },
   });
 

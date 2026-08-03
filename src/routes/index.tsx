@@ -3,6 +3,8 @@ import { ArrowRight, Bell, Check, CheckCircle2, Clock3, Globe2, Menu } from "luc
 import { DeadlyLogo } from "@/components/DeadlyLogo";
 import { AnimatedDashboardPreview } from "@/components/AnimatedDashboardPreview";
 import { useT, type TKey } from "@/lib/i18n";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -27,6 +29,26 @@ const PRO_FEATURES: TKey[] = ["billing.pro.1", "billing.pro.2", "billing.pro.3",
 
 function Landing() {
   const { t } = useT();
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const isOAuthReturn = url.searchParams.has("code") || window.location.hash.includes("access_token=");
+    if (!isOAuthReturn) return;
+
+    const finishFallback = async () => {
+      const code = url.searchParams.get("code");
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) return;
+      }
+
+      const { data } = await supabase.auth.getUser();
+      if (data.user) window.location.replace("/dashboard");
+    };
+
+    void finishFallback();
+  }, []);
+
   return (
     <main className="min-h-screen overflow-hidden bg-background text-foreground">
       <header className="fixed inset-x-0 top-0 z-50 px-4 pt-4 md:px-6">
@@ -154,7 +176,11 @@ function Landing() {
                 ))}
               </ul>
               <div className="mt-auto pt-7">
-                <Link to="/auth" className="flex h-12 items-center justify-center gap-2 rounded-full bg-primary font-semibold text-primary-foreground">
+                <Link
+                  to="/auth"
+                  search={{ next: "/dashboard/settings?tab=abonnement" }}
+                  className="flex h-12 items-center justify-center gap-2 rounded-full bg-primary font-semibold text-primary-foreground"
+                >
                   {t("landing.price.proCta")} <ArrowRight className="size-4"/>
                 </Link>
               </div>
