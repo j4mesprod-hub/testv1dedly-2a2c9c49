@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 
-export const Route = createFileRoute("/auth")({
+export const Route = createFileRoute("/auth/")({
   validateSearch: (search: Record<string, unknown>) => ({
     next: typeof search.next === "string" && search.next.startsWith("/") && !search.next.startsWith("//")
       ? search.next
