@@ -154,7 +154,11 @@ function Landing() {
                 ))}
               </ul>
               <div className="mt-auto pt-7">
-                <Link to="/auth" className="flex h-12 items-center justify-center gap-2 rounded-full bg-primary font-semibold text-primary-foreground">
+                <Link
+                  to="/auth"
+                  search={{ next: "/dashboard/settings?tab=abonnement" }}
+                  className="flex h-12 items-center justify-center gap-2 rounded-full bg-primary font-semibold text-primary-foreground"
+                >
                   {t("landing.price.proCta")} <ArrowRight className="size-4"/>
                 </Link>
               </div>
