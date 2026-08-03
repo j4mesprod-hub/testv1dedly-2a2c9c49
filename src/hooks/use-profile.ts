@@ -6,6 +6,7 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type ProfileWithEmail = Profile & { email: string | null };
 
 async function loadProfile(): Promise<ProfileWithEmail | null> {
+  // Use getSession for speed as it's cached in the client
   const { data: sessionData } = await supabase.auth.getSession();
   const user = sessionData.session?.user;
   if (!user) return null;
@@ -53,27 +54,19 @@ export function useUpdateProfile() {
       const user = sessionData.session?.user;
       if (!user) throw new Error("Not authenticated");
 
+      // We use upsert to ensure it works even if the profile row was somehow missing
       const { data, error } = await supabase
         .from("profiles")
-        .update(patch)
-        .eq("id", user.id)
+        .upsert({ id: user.id, ...patch }, { onConflict: "id" })
         .select("*")
         .maybeSingle();
       if (error) throw error;
-      if (!data) {
-        const { data: created, error: insertError } = await supabase
-          .from("profiles")
-          .insert({ id: user.id, reminder_email: user.email ?? null, ...patch })
-          .select("*")
-          .maybeSingle();
-        if (insertError) throw insertError;
-        if (!created) throw new Error("Profil introuvable : mise à jour refusée");
-        return { ...created, email: user.email ?? null } as ProfileWithEmail;
-      }
+      if (!data) throw new Error("Profil introuvable : mise à jour refusée");
       return { ...data, email: user.email ?? null } as ProfileWithEmail;
     },
     onSuccess: (row) => {
       qc.setQueryData(["profile"], row);
+      // We still invalidate to keep everything in sync across other possible hooks
       void qc.invalidateQueries({ queryKey: ["profile"] });
     },
   });
