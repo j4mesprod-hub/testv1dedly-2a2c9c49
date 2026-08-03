@@ -88,12 +88,12 @@ function ProfileTab() {
   const [language, setLanguage] = useState("fr");
 
   useEffect(() => {
-    if (profile) {
+    if (profile && !displayName && !update.isPending) {
       setDisplayName(profile.display_name ?? "");
       setTimezone(profile.timezone ?? "Europe/Paris");
       setLanguage(profile.language ?? "fr");
     }
-  }, [profile]);
+  }, [profile, isLoading, update.isPending]);
 
   const save = async () => {
     try {
@@ -318,12 +318,12 @@ function SummaryCard() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (profile) {
+    if (profile && !update.isPending) {
       setEnabled(profile.summary_enabled ?? true);
       setHour(profile.summary_hour ?? 9);
       setMinute(profile.summary_minute ?? 0);
     }
-  }, [profile]);
+  }, [profile, update.isPending]);
 
   const save = async () => {
     await update.mutateAsync({
