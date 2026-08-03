@@ -6,8 +6,8 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type ProfileWithEmail = Profile & { email: string | null };
 
 async function loadProfile(): Promise<ProfileWithEmail | null> {
-  const { data: u } = await supabase.auth.getUser();
-  const user = u.user;
+  const { data: sessionData } = await supabase.auth.getSession();
+  const user = sessionData.session?.user;
   if (!user) return null;
 
   const email = user.email ?? null;
@@ -49,17 +49,27 @@ export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (patch: Partial<Profile>) => {
-      const { data: u } = await supabase.auth.getUser();
-      const user = u.user;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user;
       if (!user) throw new Error("Not authenticated");
 
       const { data, error } = await supabase
         .from("profiles")
-        .upsert({ id: user.id, reminder_email: user.email ?? null, ...patch }, { onConflict: "id" })
+        .update(patch)
+        .eq("id", user.id)
         .select("*")
         .maybeSingle();
       if (error) throw error;
-      if (!data) throw new Error("Profil introuvable : mise à jour refusée");
+      if (!data) {
+        const { data: created, error: insertError } = await supabase
+          .from("profiles")
+          .insert({ id: user.id, reminder_email: user.email ?? null, ...patch })
+          .select("*")
+          .maybeSingle();
+        if (insertError) throw insertError;
+        if (!created) throw new Error("Profil introuvable : mise à jour refusée");
+        return { ...created, email: user.email ?? null } as ProfileWithEmail;
+      }
       return { ...data, email: user.email ?? null } as ProfileWithEmail;
     },
     onSuccess: (row) => {

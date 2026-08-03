@@ -4,7 +4,7 @@ import { Send, Search, MessageSquare, KeyRound, Check, X, ArrowRight } from "luc
 import { useProfile } from "@/hooks/use-profile";
 import { cn } from "@/lib/utils";
 
-const STORAGE_PREFIX = "deadly.onboarding.telegram.v1";
+const STORAGE_PREFIX = "deadly.onboarding.telegram.v2";
 const storageKey = (userId?: string) => (userId ? `${STORAGE_PREFIX}:${userId}` : STORAGE_PREFIX);
 export const BOT_USERNAME = "DeadlyAlertBot";
 
@@ -130,6 +130,15 @@ export function TelegramOnboarding() {
     const id = window.setTimeout(() => setOpen(true), 500);
     return () => window.clearTimeout(id);
   }, [isLoading, profile?.id, profile?.telegram_chat_id]);
+
+  useEffect(() => {
+    const reopen = () => {
+      setStep(0);
+      setOpen(true);
+    };
+    window.addEventListener("deadly:open-telegram-tutorial", reopen);
+    return () => window.removeEventListener("deadly:open-telegram-tutorial", reopen);
+  }, []);
 
   const close = () => {
     if (typeof window !== "undefined") localStorage.setItem(key, "1");
