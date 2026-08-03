@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouterState } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { DashboardShell } from "@/components/DashboardShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,13 +38,14 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
 });
 
 function SettingsPage() {
-  const [tab, setTab] = useState<"profil"|"notifications"|"integrations"|"abonnement">(() => {
-    if (typeof window === "undefined") return "profil";
-    const params = new URL(window.location.href).searchParams;
-    if (params.get("checkout")) return "abonnement";
-    const t = params.get("tab");
-    return t === "notifications" || t === "integrations" || t === "abonnement" ? t : "profil";
-  });
+  const searchString = useRouterState({ select: (state) => state.location.searchStr });
+  const initialTab = () => {
+    const params = new URLSearchParams(searchString);
+    if (params.get("checkout")) return "abonnement" as const;
+    const value = params.get("tab");
+    return value === "notifications" || value === "integrations" || value === "abonnement" ? value : "profil";
+  };
+  const [tab, setTab] = useState<"profil"|"notifications"|"integrations"|"abonnement">(initialTab);
   useEffect(() => {
     const onPop = () => {
       const params = new URL(window.location.href).searchParams;
@@ -86,12 +88,12 @@ function ProfileTab() {
   const [language, setLanguage] = useState("fr");
 
   useEffect(() => {
-    if (profile) {
+    if (profile && !displayName && !update.isPending) {
       setDisplayName(profile.display_name ?? "");
       setTimezone(profile.timezone ?? "Europe/Paris");
       setLanguage(profile.language ?? "fr");
     }
-  }, [profile]);
+  }, [profile, isLoading, update.isPending]);
 
   const save = async () => {
     try {
@@ -135,10 +137,23 @@ function ProfileTab() {
             <Label className="text-xs font-medium text-muted-foreground">Fuseau horaire</Label>
             <Select value={timezone} onValueChange={setTimezone}>
               <SelectTrigger className="h-10 rounded-xl"><SelectValue/></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-80">
                 <SelectItem value="Europe/Paris">Paris (Europe/Paris)</SelectItem>
+                <SelectItem value="Europe/London">London (Europe/London)</SelectItem>
+                <SelectItem value="Europe/Berlin">Berlin (Europe/Berlin)</SelectItem>
+                <SelectItem value="Europe/Rome">Rome (Europe/Rome)</SelectItem>
+                <SelectItem value="Europe/Madrid">Madrid (Europe/Madrid)</SelectItem>
                 <SelectItem value="America/New_York">New York (America/New_York)</SelectItem>
+                <SelectItem value="America/Chicago">Chicago (America/Chicago)</SelectItem>
+                <SelectItem value="America/Denver">Denver (America/Denver)</SelectItem>
                 <SelectItem value="America/Los_Angeles">Los Angeles (America/Los_Angeles)</SelectItem>
+                <SelectItem value="America/Sao_Paulo">São Paulo (America/Sao_Paulo)</SelectItem>
+                <SelectItem value="Asia/Tokyo">Tokyo (Asia/Tokyo)</SelectItem>
+                <SelectItem value="Asia/Shanghai">Shanghai (Asia/Shanghai)</SelectItem>
+                <SelectItem value="Asia/Singapore">Singapore (Asia/Singapore)</SelectItem>
+                <SelectItem value="Asia/Dubai">Dubai (Asia/Dubai)</SelectItem>
+                <SelectItem value="Australia/Sydney">Sydney (Australia/Sydney)</SelectItem>
+                <SelectItem value="UTC">UTC</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -290,6 +305,15 @@ function NotifTab() {
           </div>
         )}
 
+        <Button
+          type="button"
+          variant="outline"
+          className="rounded-full"
+          onClick={() => window.dispatchEvent(new Event("deadly:open-telegram-tutorial"))}
+        >
+          Revoir le tutoriel Telegram
+        </Button>
+
         <p className="text-xs text-muted-foreground pt-4 border-t border-border">Les horaires de rappel (J-30, J-7, J-1…) se choisissent au moment de la création de chaque deadline.</p>
       </div>
       {linked && <SummaryCard/>}
@@ -307,12 +331,12 @@ function SummaryCard() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (profile) {
+    if (profile && !update.isPending) {
       setEnabled(profile.summary_enabled ?? true);
       setHour(profile.summary_hour ?? 9);
       setMinute(profile.summary_minute ?? 0);
     }
-  }, [profile]);
+  }, [profile, update.isPending]);
 
   const save = async () => {
     await update.mutateAsync({
@@ -427,6 +451,8 @@ function BillingTab() {
   const qc = useQueryClient();
   const isPro = profile?.plan === "pro";
   const [loading, setLoading] = useState(false);
+  const startCheckout = useServerFn(createProCheckout);
+  const finishCheckout = useServerFn(syncProAfterCheckout);
 
   // Handle Stripe callback (?checkout=success&session_id=…)
   useEffect(() => {
@@ -434,7 +460,7 @@ function BillingTab() {
     const status = url.searchParams.get("checkout");
     const sessionId = url.searchParams.get("session_id");
     if (status === "success" && sessionId) {
-      syncProAfterCheckout({ data: { sessionId } })
+      finishCheckout({ data: { sessionId } })
         .then((r) => {
           if (r.upgraded) {
             toast.success("Bienvenue chez Pro 🎉");
@@ -452,26 +478,13 @@ function BillingTab() {
       url.searchParams.delete("checkout");
       window.history.replaceState({}, "", url.toString());
     }
-  }, [qc]);
+  }, [finishCheckout, qc]);
 
   const upgrade = async () => {
     setLoading(true);
     try {
-      let origin = window.location.origin;
-      try { if (window.top) origin = window.top.location.origin; } catch { /* cross-origin */ }
-      const { url } = await createProCheckout({ data: { origin } });
-      // Escape the Lovable preview iframe so Stripe Checkout loads at top level.
-      try {
-        if (window.top && window.top !== window.self) {
-          window.top.location.href = url;
-          return;
-        }
-      } catch {
-        window.open(url, "_blank", "noopener");
-        setLoading(false);
-        return;
-      }
-      window.location.href = url;
+      const { url } = await startCheckout({ data: { origin: window.location.origin } });
+      window.location.assign(url);
     } catch (e) {
       toast.error("Impossible d'ouvrir le paiement", { description: e instanceof Error ? e.message : "" });
       setLoading(false);
