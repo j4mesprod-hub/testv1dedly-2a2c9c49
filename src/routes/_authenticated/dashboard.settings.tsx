@@ -137,10 +137,23 @@ function ProfileTab() {
             <Label className="text-xs font-medium text-muted-foreground">Fuseau horaire</Label>
             <Select value={timezone} onValueChange={setTimezone}>
               <SelectTrigger className="h-10 rounded-xl"><SelectValue/></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-80">
                 <SelectItem value="Europe/Paris">Paris (Europe/Paris)</SelectItem>
+                <SelectItem value="Europe/London">London (Europe/London)</SelectItem>
+                <SelectItem value="Europe/Berlin">Berlin (Europe/Berlin)</SelectItem>
+                <SelectItem value="Europe/Rome">Rome (Europe/Rome)</SelectItem>
+                <SelectItem value="Europe/Madrid">Madrid (Europe/Madrid)</SelectItem>
                 <SelectItem value="America/New_York">New York (America/New_York)</SelectItem>
+                <SelectItem value="America/Chicago">Chicago (America/Chicago)</SelectItem>
+                <SelectItem value="America/Denver">Denver (America/Denver)</SelectItem>
                 <SelectItem value="America/Los_Angeles">Los Angeles (America/Los_Angeles)</SelectItem>
+                <SelectItem value="America/Sao_Paulo">São Paulo (America/Sao_Paulo)</SelectItem>
+                <SelectItem value="Asia/Tokyo">Tokyo (Asia/Tokyo)</SelectItem>
+                <SelectItem value="Asia/Shanghai">Shanghai (Asia/Shanghai)</SelectItem>
+                <SelectItem value="Asia/Singapore">Singapore (Asia/Singapore)</SelectItem>
+                <SelectItem value="Asia/Dubai">Dubai (Asia/Dubai)</SelectItem>
+                <SelectItem value="Australia/Sydney">Sydney (Australia/Sydney)</SelectItem>
+                <SelectItem value="UTC">UTC</SelectItem>
               </SelectContent>
             </Select>
           </div>
