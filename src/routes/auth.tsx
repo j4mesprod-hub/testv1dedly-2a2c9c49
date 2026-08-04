@@ -47,6 +47,27 @@ function AuthPage() {
 
   const signIn = async () => {
     setLoading(true);
+    const host = window.location.hostname;
+    const isLovableHost =
+      host.endsWith(".lovable.app") || host.endsWith(".lovable.dev") || host === "localhost";
+
+    // Off Lovable hosting (Vercel, custom domain), the managed OAuth broker paths
+    // (/~oauth/*) do not exist -> 404. Use the direct Supabase OAuth flow there.
+    if (!isLovableHost) {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin + "/auth/callback",
+          queryParams: { prompt: "select_account" },
+        },
+      });
+      if (error) {
+        setLoading(false);
+        toast.error(t("auth.failed"), { description: error.message });
+      }
+      return;
+    }
+
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin + "/auth/callback",
     });
@@ -58,6 +79,7 @@ function AuthPage() {
     if (result.redirected) return;
     navigate({ to: "/dashboard" });
   };
+
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
