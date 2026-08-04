@@ -12,8 +12,8 @@ select cron.schedule(
   '0 * * * *',
   $$
   select net.http_post(
-    url := 'https://project--10c0b03e-5833-4c50-90ad-4680b5c5ae99-dev.lovable.app/api/public/hooks/reminders',
-    headers := '{"Content-Type":"application/json","apikey":"sb_publishable_7SsA2jDvZclvL9X61tA_RA_0-bL0eKm"}'::jsonb,
+    url := coalesce(current_setting('app.reminders_hook_url', true), ''),
+    headers := jsonb_build_object('Content-Type', 'application/json'),
     body := '{}'::jsonb
   );
   $$
