@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { NewDeadlineDialog } from "@/components/NewDeadlineDialog";
 import { useT } from "@/lib/i18n";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/dashboard/calendar")({
   head: () => ({
@@ -37,10 +38,10 @@ const WEEKDAYS = {
 } as const;
 
 function CalendarPage() {
-  const { data: items = [] } = useDeadlines();
+  const { data: items = [], isLoading } = useDeadlines();
   const [month, setMonth] = useState(startOfMonth(new Date()));
   const days = eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) });
-  const startWeekday = (startOfMonth(month).getDay() + 6) % 7; // Monday first
+  const startWeekday = (startOfMonth(month).getDay() + 6) % 7;
   const { t, lang, dateLocale } = useT();
 
   return (
@@ -49,6 +50,24 @@ function CalendarPage() {
       subtitle={t("calendar.subtitle")}
       action={<NewDeadlineDialog trigger={<Button className="rounded-full bg-ink text-cream hover:bg-ink/90 h-11 px-5"><Plus className="h-4 w-4 mr-1.5"/>{t("nav.new")}</Button>}/>}
     >
+      {isLoading ? (
+        <div className="rounded-2xl bg-card border border-border p-6">
+          <div className="flex items-center justify-between mb-4">
+            <Skeleton className="h-6 w-32" />
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-9 rounded-full" />
+              <Skeleton className="h-9 w-16 rounded-full" />
+              <Skeleton className="h-9 w-9 rounded-full" />
+            </div>
+          </div>
+          <div className="grid grid-cols-7 gap-1 mb-2">
+            {Array.from({ length: 7 }).map((_, i) => <Skeleton key={i} className="h-8" />)}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {Array.from({ length: 35 }).map((_, i) => <Skeleton key={i} className="min-h-24" />)}
+          </div>
+        </div>
+      ) : (
       <div className="rounded-2xl bg-card border border-border p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-display text-xl font-bold capitalize">{format(month, "MMMM yyyy", { locale: dateLocale })}</h3>
@@ -80,6 +99,7 @@ function CalendarPage() {
           })}
         </div>
       </div>
+      )}
     </DashboardShell>
   );
 }

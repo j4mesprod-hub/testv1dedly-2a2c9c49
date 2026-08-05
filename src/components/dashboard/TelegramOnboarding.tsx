@@ -124,8 +124,8 @@ export function TelegramOnboarding() {
       localStorage.setItem(STORAGE_KEY, "1");
       return;
     }
-    const id = window.setTimeout(() => setOpen(true), 500);
-    return () => window.clearTimeout(id);
+    setOpen(true);
+    return;
   }, [isLoading, profile?.telegram_chat_id]);
 
   const close = () => {

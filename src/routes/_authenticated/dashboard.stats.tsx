@@ -4,6 +4,7 @@ import { useDeadlines } from "@/hooks/use-deadlines";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
 import { format, startOfMonth, subMonths } from "date-fns";
 import { useT } from "@/lib/i18n";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/dashboard/stats")({
   head: () => ({
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/stats")({
 const COLORS = { upcoming: "var(--brand-blue)", in_progress: "var(--brand-orange)", completed: "var(--brand-green)", overdue: "var(--brand-red)" } as const;
 
 function Stats() {
-  const { data: items = [] } = useDeadlines();
+  const { data: items = [], isLoading } = useDeadlines();
   const { t, dateLocale } = useT();
 
   const total = items.length;
@@ -52,6 +53,31 @@ function Stats() {
 
   return (
     <DashboardShell title={t("stats.title")} subtitle={t("stats.subtitle")}>
+      {isLoading ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="rounded-2xl bg-card border border-border p-6">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="mt-2 h-10 w-16" />
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="rounded-2xl bg-card border border-border p-6">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="mt-1 h-4 w-56" />
+              <Skeleton className="mt-4 h-72" />
+            </div>
+            <div className="rounded-2xl bg-card border border-border p-6">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="mt-1 h-4 w-56" />
+              <Skeleton className="mt-4 h-72" />
+            </div>
+          </div>
+        </>
+      ) : (
+      <>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <BigStat label={t("stats.rate")} value={`${rate}%`} tone="green"/>
         <BigStat label={t("stats.total")} value={total} tone="blue"/>
@@ -93,6 +119,8 @@ function Stats() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </DashboardShell>
   );
 }

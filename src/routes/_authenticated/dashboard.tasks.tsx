@@ -9,6 +9,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { useEffect, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useT, type TKey } from "@/lib/i18n";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/dashboard/tasks")({
   head: () => ({
@@ -46,7 +47,7 @@ const PRIORITY_DOT: Record<string, string> = {
 };
 
 function Tasks() {
-  const { data: items = [] } = useDeadlines();
+  const { data: items = [], isLoading } = useDeadlines();
   const [filter, setFilter] = useState<"all" | DeadlineStatus>("all");
   const update = useUpdateDeadlineStatus();
   const del = useDeleteDeadline();
@@ -72,6 +73,23 @@ function Tasks() {
         }/>
       }
     >
+      {isLoading ? (
+        <div className="rounded-2xl bg-card border border-border divide-y divide-border">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 p-4">
+              <Skeleton className="h-2 w-2 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+              <Skeleton className="h-6 w-20 rounded-full" />
+              <Skeleton className="h-9 w-36 rounded-full" />
+              <Skeleton className="h-9 w-9 rounded-full" />
+            </div>
+          ))}
+        </div>
+      ) : (
+      <>
       <div className="flex flex-wrap items-center gap-2 mb-6">
         {(["all", "upcoming", "in_progress", "completed", "overdue"] as const).map((k) => {
           const count = k === "all" ? items.length : items.filter((i) => i.status === k).length;
@@ -128,6 +146,8 @@ function Tasks() {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
     </DashboardShell>
   );

@@ -20,8 +20,10 @@ import { toast } from "sonner";
 import { useT, type TKey } from "@/lib/i18n";
 import { sendDailySummaryNow } from "@/lib/telegram.functions";
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, CartesianGrid } from "recharts";
-import { useDeadlines, type Deadline } from "@/hooks/use-deadlines";
-import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
+import { type Deadline } from "@/hooks/use-deadlines";
+import { useUpdateProfile } from "@/hooks/use-profile";
+import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { DashboardSkeleton } from "@/components/DashboardSkeleton";
 import { NewDeadlineDialog } from "@/components/NewDeadlineDialog";
 import { formatDistanceToNow, format, subDays, startOfDay, differenceInCalendarDays } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -68,8 +70,7 @@ const TONE_BG = {
 } as const;
 
 function Overview() {
-  const { data: deadlines = [], isLoading } = useDeadlines();
-  const { data: profile } = useProfile();
+  const { deadlines, profile, isLoading } = useDashboardData();
   const updateProfile = useUpdateProfile();
   const { t, dateLocale } = useT();
   const [summaryBusy, setSummaryBusy] = useState(false);
@@ -95,6 +96,18 @@ function Overview() {
 
   const next = deadlines.filter((d) => d.status !== "completed").slice(0, 5);
   const isEmpty = !isLoading && deadlines.length === 0;
+
+  if (isLoading) {
+    return (
+      <DashboardShell
+        hideHeadingOnMobile
+        title={t("overview.hello")}
+        subtitle={t("overview.subtitle")}
+      >
+        <DashboardSkeleton />
+      </DashboardShell>
+    );
+  }
 
   const total = deadlines.length || 1;
   const ratio = Math.round((completed / total) * 100);
