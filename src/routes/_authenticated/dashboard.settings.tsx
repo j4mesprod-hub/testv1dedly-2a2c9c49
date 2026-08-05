@@ -219,7 +219,7 @@ function NotifTab() {
     setLinking(true);
     try {
       await linkTelegramAccount({ data: { code: code.trim() } });
-      toast.success("Compte Telegram lié 🎉");
+      toast.success("Compte Telegram lié");
       setCode("");
       qc.invalidateQueries({ queryKey: ["profile"] });
     } catch (e) {
@@ -447,7 +447,7 @@ function BillingTab() {
       syncProAfterCheckout({ data: { sessionId } })
         .then((r) => {
           if (r.upgraded) {
-            toast.success("Bienvenue chez Pro 🎉");
+            toast.success("Bienvenue chez Pro");
             qc.invalidateQueries({ queryKey: ["profile"] });
           }
         })
