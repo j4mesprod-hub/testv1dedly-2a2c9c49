@@ -30,6 +30,7 @@ function encodeStripe(obj: Record<string, unknown>, prefix = ""): string {
 async function stripeCall<T = unknown>(path: string, body: Record<string, unknown>): Promise<T> {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
+  const keyMode = key.startsWith("sk_live") ? "live" : key.startsWith("sk_test") ? "test" : "unknown";
   const res = await fetch(`${STRIPE_API}${path}`, {
     method: "POST",
     headers: {
@@ -38,7 +39,11 @@ async function stripeCall<T = unknown>(path: string, body: Record<string, unknow
     },
     body: encodeStripe(body),
   });
-  const json = (await res.json()) as { error?: { message?: string } } & Record<string, unknown>;
+  const rawText = await res.text();
+  console.log("[stripeCall] mode:", keyMode, "status:", res.status, "path:", path);
+  console.log("[stripeCall] response body:", rawText.slice(0, 2000));
+  let json: { error?: { message?: string } } & Record<string, unknown>;
+  try { json = JSON.parse(rawText); } catch { throw new Error(`Stripe returned non-JSON: ${rawText.slice(0, 500)}`); }
   if (!res.ok) {
     throw new Error(json?.error?.message || `Stripe error ${res.status}`);
   }
@@ -48,10 +53,15 @@ async function stripeCall<T = unknown>(path: string, body: Record<string, unknow
 async function stripeGet<T = unknown>(path: string): Promise<T> {
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error("STRIPE_SECRET_KEY not configured");
+  const keyMode = key.startsWith("sk_live") ? "live" : key.startsWith("sk_test") ? "test" : "unknown";
   const res = await fetch(`${STRIPE_API}${path}`, {
     headers: { Authorization: `Bearer ${key}` },
   });
-  const json = (await res.json()) as { error?: { message?: string } } & Record<string, unknown>;
+  const rawText = await res.text();
+  console.log("[stripeGet] mode:", keyMode, "status:", res.status, "path:", path);
+  console.log("[stripeGet] response body:", rawText.slice(0, 2000));
+  let json: { error?: { message?: string } } & Record<string, unknown>;
+  try { json = JSON.parse(rawText); } catch { throw new Error(`Stripe returned non-JSON: ${rawText.slice(0, 500)}`); }
   if (!res.ok) throw new Error(json?.error?.message || `Stripe error ${res.status}`);
   return json as T;
 }
@@ -65,6 +75,7 @@ export const createProCheckout = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { userId, claims } = context;
     const email = (claims as { email?: string }).email;
+    console.log("[createProCheckout] handler reached. userId:", userId, "email:", email, "origin:", data.origin);
 
     const session = await stripeCall<{ id: string; url: string }>("/checkout/sessions", {
       mode: "subscription",
@@ -83,6 +94,7 @@ export const createProCheckout = createServerFn({ method: "POST" })
       allow_promotion_codes: "true",
     });
 
+    console.log("[createProCheckout] session created. id:", session.id, "url:", session.url);
     return { url: session.url };
   });
 
