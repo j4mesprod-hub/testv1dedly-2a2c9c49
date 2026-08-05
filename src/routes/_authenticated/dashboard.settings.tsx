@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
 import { Mail, Bell, Slack, Chrome, Github, Check, Trash2, Loader2, Send } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createProCheckout, syncProAfterCheckout } from "@/lib/stripe.functions";
@@ -26,7 +27,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/settings")({
   head: () => ({
     meta: [
       { title: "Paramètres — Deadly" },
-      { name: "description", content: "Configurez votre profil, vos emails de rappel, vos tests d’envoi et votre abonnement Deadly." },
+      { name: "description", content: "Configurez votre profil, vos emails de rappel, vos tests d'envoi et votre abonnement Deadly." },
       { property: "og:title", content: "Paramètres — Deadly" },
       { property: "og:description", content: "Gérez les réglages de compte, notifications et abonnement de votre espace Deadly." },
       { property: "og:type", content: "website" },
@@ -100,7 +101,34 @@ function ProfileTab() {
     toast.success("Profil mis à jour");
   };
 
-  if (isLoading) return <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin"/>Chargement…</div>;
+  if (isLoading) return (
+    <div className="max-w-4xl">
+      <div className="rounded-2xl bg-card border border-border p-6 space-y-6">
+        <div>
+          <Skeleton className="h-6 w-64" />
+          <Skeleton className="mt-1 h-4 w-48" />
+        </div>
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-16 w-16 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-10 w-full rounded-xl" />
+          </div>
+        </div>
+        <div className="grid md:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end">
+          <Skeleton className="h-10 w-32 rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="max-w-4xl">
@@ -219,7 +247,7 @@ function NotifTab() {
     setLinking(true);
     try {
       await linkTelegramAccount({ data: { code: code.trim() } });
-      toast.success("Compte Telegram lié");
+      toast.success("Compte Telegram lié 🎉");
       setCode("");
       qc.invalidateQueries({ queryKey: ["profile"] });
     } catch (e) {
@@ -438,7 +466,6 @@ function BillingTab() {
   const isPro = profile?.plan === "pro";
   const [loading, setLoading] = useState(false);
 
-  // Handle Stripe callback (?checkout=success&session_id=…)
   useEffect(() => {
     const url = new URL(window.location.href);
     const status = url.searchParams.get("checkout");
@@ -447,7 +474,7 @@ function BillingTab() {
       syncProAfterCheckout({ data: { sessionId } })
         .then((r) => {
           if (r.upgraded) {
-            toast.success("Bienvenue chez Pro");
+            toast.success("Bienvenue chez Pro 🎉");
             qc.invalidateQueries({ queryKey: ["profile"] });
           }
         })
@@ -465,17 +492,12 @@ function BillingTab() {
   }, [qc]);
 
   const upgrade = async () => {
-    console.log("Upgrade button clicked");
-    console.log("[upgrade] profile:", profile, "isPro:", isPro, "loading:", loading);
-    if (isPro) { console.log("[upgrade] aborted: already pro"); return; }
+    if (isPro) return;
     setLoading(true);
     try {
       let origin = window.location.origin;
       try { if (window.top) origin = window.top.location.origin; } catch { /* cross-origin */ }
-      console.log("Calling createProCheckout with origin:", origin);
       const { url } = await createProCheckout({ data: { origin } });
-      console.log("[upgrade] got URL:", url);
-      // Escape the Lovable preview iframe so Stripe Checkout loads at top level.
       try {
         if (window.top && window.top !== window.self) {
           window.top.location.href = url;
