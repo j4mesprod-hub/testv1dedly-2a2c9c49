@@ -8,16 +8,17 @@ export function useProfile() {
   return useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return null;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return null;
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
-        .eq("id", u.user.id)
+        .eq("id", session.user.id)
         .maybeSingle();
       if (error) throw error;
       return data;
     },
+    staleTime: 60_000,
   });
 }
 
@@ -25,9 +26,9 @@ export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (patch: Partial<Profile>) => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not authenticated");
-      const { error } = await supabase.from("profiles").update(patch).eq("id", u.user.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("Not authenticated");
+      const { error } = await supabase.from("profiles").update(patch).eq("id", session.user.id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),

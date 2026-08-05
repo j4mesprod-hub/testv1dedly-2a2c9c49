@@ -14,7 +14,6 @@ export function useDeadlines() {
         .select("*")
         .order("due_at", { ascending: true });
       if (error) throw error;
-      // auto-mark overdue
       const now = Date.now();
       return (data ?? []).map((d) => {
         if (d.status !== "completed" && new Date(d.due_at).getTime() < now && d.status !== "overdue") {
@@ -23,6 +22,7 @@ export function useDeadlines() {
         return d;
       });
     },
+    staleTime: 60_000,
   });
 }
 
@@ -40,11 +40,11 @@ export function useCreateDeadline() {
       alert_rules: number[];
       alert_hour: number;
     }) => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Not authenticated");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) throw new Error("Not authenticated");
       const { data, error } = await supabase
         .from("deadlines")
-        .insert({ ...input, user_id: u.user.id })
+        .insert({ ...input, user_id: session.user.id })
         .select()
         .single();
       if (error) throw error;

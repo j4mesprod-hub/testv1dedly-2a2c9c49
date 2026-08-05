@@ -16,6 +16,7 @@ export function useNotifications() {
       if (error) throw error;
       return data ?? [];
     },
+    staleTime: 60_000,
   });
 }
 
@@ -23,12 +24,12 @@ export function useMarkAllRead() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
       const { error } = await supabase
         .from("notifications")
         .update({ read: true })
-        .eq("user_id", u.user.id)
+        .eq("user_id", session.user.id)
         .eq("read", false);
       if (error) throw error;
     },
