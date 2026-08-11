@@ -2,18 +2,23 @@ import { useProfile } from "@/hooks/use-profile";
 import { useDeadlines } from "@/hooks/use-deadlines";
 import { useNotifications } from "@/hooks/use-notifications";
 
-/**
- * Loads profile, deadlines, and notifications in parallel via React Query.
- * All three queries fire simultaneously (React Query parallelism) and we
- * expose a single `isLoading` gate so the dashboard can show a skeleton
- * until everything is ready.
- */
 export function useDashboardData() {
   const profile = useProfile();
   const deadlines = useDeadlines();
   const notifications = useNotifications();
 
   const isLoading = profile.isLoading || deadlines.isLoading;
+
+  if (profile.isLoading || deadlines.isLoading) {
+    console.log("[useDashboardData] loading gate:", {
+      profileLoading: profile.isLoading,
+      deadlinesLoading: deadlines.isLoading,
+      profileStatus: profile.status,
+      deadlinesStatus: deadlines.status,
+      profileError: profile.error?.message,
+      deadlinesError: deadlines.error?.message,
+    });
+  }
 
   return {
     profile: profile.data,
