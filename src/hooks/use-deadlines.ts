@@ -9,10 +9,14 @@ export function useDeadlines() {
   return useQuery({
     queryKey: ["deadlines"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const query = supabase
         .from("deadlines")
         .select("*")
         .order("due_at", { ascending: true });
+      const timeout = new Promise<{ data: null; error: Error }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: new Error("Deadlines request timeout") }), 10_000),
+      );
+      const { data, error } = await Promise.race([query, timeout]);
       if (error) throw error;
       const now = Date.now();
       return (data ?? []).map((d) => {

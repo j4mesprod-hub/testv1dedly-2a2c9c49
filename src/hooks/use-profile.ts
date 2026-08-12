@@ -8,14 +8,16 @@ export function useProfile() {
   return useQuery({
     queryKey: ["profile"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .maybeSingle();
+      const query = supabase.from("profiles").select("*").maybeSingle();
+      const timeout = new Promise<{ data: null; error: Error }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: new Error("Profile request timeout") }), 10_000),
+      );
+      const { data, error } = await Promise.race([query, timeout]);
       if (error) throw error;
       return data;
     },
     staleTime: 60_000,
+    retry: 1,
   });
 }
 

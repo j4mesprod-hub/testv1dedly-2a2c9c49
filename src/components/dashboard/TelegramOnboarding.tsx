@@ -113,12 +113,13 @@ function Scene({ scene }: { scene: Step["scene"] }) {
 }
 
 export function TelegramOnboarding() {
-  const { data: profile, isLoading } = useProfile();
+  const { data: profile, status: profileStatus } = useProfile();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    if (isLoading || typeof window === "undefined") return;
+    if (profileStatus === "pending") return;
+    if (typeof window === "undefined") return;
     if (localStorage.getItem(STORAGE_KEY)) return;
     if (profile?.telegram_chat_id) {
       localStorage.setItem(STORAGE_KEY, "1");
@@ -126,7 +127,7 @@ export function TelegramOnboarding() {
     }
     setOpen(true);
     return;
-  }, [isLoading, profile?.telegram_chat_id]);
+  }, [profileStatus, profile?.telegram_chat_id]);
 
   const close = () => {
     if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY, "1");
