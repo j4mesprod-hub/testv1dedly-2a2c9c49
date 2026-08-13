@@ -1,22 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { useSession } from "@/hooks/use-auth";
 
 export type Deadline = Database["public"]["Tables"]["deadlines"]["Row"];
 export type DeadlineStatus = Database["public"]["Enums"]["deadline_status"];
 
 export function useDeadlines() {
+  const { user, ready } = useSession();
   return useQuery({
     queryKey: ["deadlines"],
+    enabled: !!user && ready,
     queryFn: async () => {
-      const query = supabase
+      const { data, error } = await supabase
         .from("deadlines")
         .select("*")
         .order("due_at", { ascending: true });
-      const timeout = new Promise<{ data: null; error: Error }>((resolve) =>
-        setTimeout(() => resolve({ data: null, error: new Error("Deadlines request timeout") }), 10_000),
-      );
-      const { data, error } = await Promise.race([query, timeout]);
       if (error) throw error;
       const now = Date.now();
       return (data ?? []).map((d) => {

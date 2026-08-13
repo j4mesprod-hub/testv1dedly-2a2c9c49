@@ -7,7 +7,7 @@ export function useDashboardData() {
   const deadlines = useDeadlines();
   const notifications = useNotifications();
 
-  const isLoading = profile.isLoading || deadlines.isLoading;
+  const isLoading = deadlines.isLoading;
 
   return {
     profile: profile.data,

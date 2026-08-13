@@ -1,12 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { useSession } from "@/hooks/use-auth";
 
 export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 
 export function useNotifications() {
+  const { user, ready } = useSession();
   return useQuery({
     queryKey: ["notifications"],
+    enabled: !!user && ready,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("notifications")

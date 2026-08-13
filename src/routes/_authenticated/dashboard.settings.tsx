@@ -5,11 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
 import { Mail, Bell, Slack, Chrome, Github, Check, Trash2, Loader2, Send } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createProCheckout, syncProAfterCheckout } from "@/lib/stripe.functions";
-import { deleteMyAccount } from "@/lib/account.functions";
+import { createProCheckout, syncProAfterCheckout } from "@lib/stripe.functions";
+import { deleteMyAccount } from "@lib/account.functions";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getTelegramBotUsername,
@@ -80,7 +79,7 @@ function SettingsPage() {
 }
 
 function ProfileTab() {
-  const { data: profile, isLoading } = useProfile();
+  const { data: profile } = useProfile();
   const update = useUpdateProfile();
   const [displayName, setDisplayName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
@@ -100,35 +99,6 @@ function ProfileTab() {
     await update.mutateAsync({ display_name: displayName || null, avatar_url: avatarUrl || null, timezone, language });
     toast.success("Profil mis à jour");
   };
-
-  if (isLoading) return (
-    <div className="max-w-4xl">
-      <div className="rounded-2xl bg-card border border-border p-6 space-y-6">
-        <div>
-          <Skeleton className="h-6 w-64" />
-          <Skeleton className="mt-1 h-4 w-48" />
-        </div>
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-16 w-16 rounded-full" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-10 w-full rounded-xl" />
-          </div>
-        </div>
-        <div className="grid md:grid-cols-2 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="space-y-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-10 w-full rounded-xl" />
-            </div>
-          ))}
-        </div>
-        <div className="flex justify-end">
-          <Skeleton className="h-10 w-32 rounded-full" />
-        </div>
-      </div>
-    </div>
-  );
 
   return (
     <div className="max-w-4xl">
@@ -247,7 +217,7 @@ function NotifTab() {
     setLinking(true);
     try {
       await linkTelegramAccount({ data: { code: code.trim() } });
-      toast.success("Compte Telegram lié 🎉");
+      toast.success("Compte Telegram lié");
       setCode("");
       qc.invalidateQueries({ queryKey: ["profile"] });
     } catch (e) {
@@ -474,7 +444,7 @@ function BillingTab() {
       syncProAfterCheckout({ data: { sessionId } })
         .then((r) => {
           if (r.upgraded) {
-            toast.success("Bienvenue chez Pro 🎉");
+            toast.success("Bienvenue chez Pro");
             qc.invalidateQueries({ queryKey: ["profile"] });
           }
         })
