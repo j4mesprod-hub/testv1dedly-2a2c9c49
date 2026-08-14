@@ -7,14 +7,19 @@ export function useDashboardData() {
   const deadlines = useDeadlines();
   const notifications = useNotifications();
 
-  const isLoading = deadlines.isLoading;
-
   return {
     profile: profile.data,
-    deadlines: deadlines.data ?? [],
-    notifications: notifications.data ?? [],
-    isLoading,
     profileLoading: profile.isLoading,
+    profileError: profile.error,
+
+    deadlines: deadlines.data ?? [],
     deadlinesLoading: deadlines.isLoading,
+    deadlinesError: deadlines.error,
+    deadlinesRefetch: deadlines.refetch,
+
+    notifications: notifications.data ?? [],
+    notificationsLoading: notifications.isLoading,
+    notificationsError: notifications.error,
+    notificationsRefetch: notifications.refetch,
   };
 }

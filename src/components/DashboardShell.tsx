@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, type FormEvent } from "react";
 import {
   LayoutDashboard,
   Calendar,
@@ -42,48 +42,15 @@ function initials(name?: string | null, email?: string | null) {
   return (parts[0]?.[0] ?? "?").toUpperCase() + (parts[1]?.[0] ?? "").toUpperCase();
 }
 
-function NavIcon({
-  to,
-  label,
-  icon: Icon,
-  active,
-  expanded,
-}: {
-  to: string;
-  label: string;
-  icon: typeof LayoutDashboard;
-  active: boolean;
-  expanded: boolean;
-}) {
+function Avatar({ profile, inits, size = "h-9 w-9" }: { profile: { avatar_url?: string | null } | null | undefined; inits: string; size?: string }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Link
-          to={to}
-          className={cn(
-            "group flex h-11 items-center rounded-full transition",
-            expanded ? "w-full justify-start gap-3 px-3" : "w-11 justify-center",
-            active ? "bg-cream text-ink" : "text-cream/60 hover:bg-cream/10 hover:text-cream",
-          )}
-          aria-label={label}
-        >
-          <Icon className="h-[18px] w-[18px] shrink-0" />
-          <span
-            className={cn(
-              "truncate text-sm font-semibold transition-opacity",
-              expanded ? "opacity-100" : "sr-only opacity-0",
-            )}
-          >
-            {label}
-          </span>
-        </Link>
-      </TooltipTrigger>
-      {!expanded && (
-        <TooltipContent side="right" className="border-ink bg-ink text-cream">
-          {label}
-        </TooltipContent>
+    <button className={cn("grid shrink-0 place-items-center overflow-hidden rounded-full bg-ink text-xs font-bold text-cream", size)}>
+      {profile?.avatar_url ? (
+        <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+      ) : (
+        inits
       )}
-    </Tooltip>
+    </button>
   );
 }
 
@@ -105,7 +72,6 @@ export function DashboardShell({
   const { t } = useT();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
   const isActive = (to: string, exact?: boolean) =>
     exact ? pathname === to : pathname === to || pathname.startsWith(to + "/");
@@ -115,83 +81,85 @@ export function DashboardShell({
     navigate({ to: "/auth", replace: true });
   };
 
-  const submitSearch = (e: React.FormEvent) => {
+  const submitSearch = (e: FormEvent) => {
     e.preventDefault();
     navigate({ to: "/dashboard/tasks", search: { q: query || undefined } as never });
   };
 
   const inits = initials(profile?.display_name, profile?.reminder_email);
+  const allNav = [...nav, { to: "/dashboard/settings", key: "nav.settings" as const, short: "Réglages", icon: Settings }];
 
   return (
     <TooltipProvider delayDuration={200}>
       <div className="min-h-screen bg-background text-foreground">
-        {/* ---------- Desktop / tablet: floating rail ---------- */}
-        <aside
-          onMouseEnter={() => setSidebarExpanded(true)}
-          onMouseLeave={() => setSidebarExpanded(false)}
-          className={cn(
-            "fixed bottom-4 left-4 top-4 z-40 hidden flex-col justify-between rounded-[28px] bg-ink py-4 text-cream shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)] transition-[width,padding] duration-300 ease-out md:flex",
-            sidebarExpanded ? "w-56 px-3" : "w-16 items-center px-2",
-          )}
-        >
+        {/* Desktop floating sidebar */}
+        <aside className="fixed bottom-4 left-4 top-4 z-40 hidden w-16 flex-col items-center justify-between rounded-[28px] bg-ink py-4 text-cream shadow-[0_20px_60px_-20px_rgba(0,0,0,0.35)] md:flex">
           <div className="flex w-full flex-col items-center gap-2">
             <Link
               to="/"
               aria-label="Deadly"
-              className={cn(
-                "flex h-11 items-center rounded-full bg-cream text-ink transition-all",
-                sidebarExpanded ? "w-full justify-start gap-3 px-3" : "w-11 justify-center",
-              )}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-cream text-ink"
             >
               <CheckCircle2 className="h-[18px] w-[18px] shrink-0" strokeWidth={2.4} />
-              <span className={cn("truncate text-sm font-extrabold", sidebarExpanded ? "block" : "sr-only")}>
-                Deadly
-              </span>
             </Link>
             <NewDeadlineDialog
               trigger={
                 <button
                   aria-label={t("nav.newDeadline")}
-                  className={cn(
-                    "flex h-11 items-center rounded-full border border-cream/25 text-cream transition-all hover:bg-cream/10",
-                    sidebarExpanded ? "w-full justify-start gap-3 px-3" : "w-11 justify-center",
-                  )}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border border-cream/25 text-cream transition hover:bg-cream/10"
                 >
                   <Plus className="h-[18px] w-[18px] shrink-0" />
-                  <span className={cn("truncate text-sm font-semibold", sidebarExpanded ? "block" : "sr-only")}>
-                    {t("nav.new")}
-                  </span>
                 </button>
               }
             />
             <div className="my-1 h-px w-6 bg-cream/10" />
-            {nav.map((item) => (
-              <NavIcon
-                key={item.to}
-                to={item.to}
-                label={t(item.key)}
-                icon={item.icon}
-                active={isActive(item.to, item.exact)}
-                expanded={sidebarExpanded}
-              />
-            ))}
+            {nav.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.to, item.exact);
+              return (
+                <Tooltip key={item.to}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      to={item.to}
+                      className={cn(
+                        "flex h-11 w-11 items-center justify-center rounded-full transition",
+                        active ? "bg-cream text-ink" : "text-cream/60 hover:bg-cream/10 hover:text-cream",
+                      )}
+                      aria-label={t(item.key)}
+                    >
+                      <Icon className="h-[18px] w-[18px] shrink-0" />
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="border-ink bg-ink text-cream">
+                    {t(item.key)}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
           </div>
-          <div className="flex w-full flex-col items-center gap-2">
-            <NavIcon
-              to="/dashboard/settings"
-              label={t("nav.settings")}
-              icon={Settings}
-              active={isActive("/dashboard/settings")}
-              expanded={sidebarExpanded}
-            />
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to="/dashboard/settings"
+                className={cn(
+                  "flex h-11 w-11 items-center justify-center rounded-full transition",
+                  isActive("/dashboard/settings") ? "bg-cream text-ink" : "text-cream/60 hover:bg-cream/10 hover:text-cream",
+                )}
+                aria-label={t("nav.settings")}
+              >
+                <Settings className="h-[18px] w-[18px] shrink-0" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="border-ink bg-ink text-cream">
+              {t("nav.settings")}
+            </TooltipContent>
+          </Tooltip>
         </aside>
 
         <div className="md:pl-24">
-          {/* ---------- Mobile top bar ---------- */}
+          {/* Mobile top bar */}
           <header className="sticky top-0 z-30 liquid-glass border-x-0 border-t-0 md:hidden">
             <div className="grid h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4">
-
               <Link to="/" className="flex min-w-0 items-center gap-2">
                 <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink text-cream">
                   <CheckCircle2 className="h-4 w-4" strokeWidth={2.4} />
@@ -207,17 +175,10 @@ export function DashboardShell({
                 >
                   <Send className="h-4 w-4" />
                 </Link>
-
                 <NotificationsBell />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-ink text-xs font-bold text-cream">
-                      {profile?.avatar_url ? (
-                        <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        inits
-                      )}
-                    </button>
+                    <Avatar profile={profile} inits={inits} />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel className="truncate">
@@ -237,7 +198,7 @@ export function DashboardShell({
             </div>
           </header>
 
-          {/* ---------- Desktop top bar ---------- */}
+          {/* Desktop top bar */}
           <header className="sticky top-0 z-20 hidden border-b border-border bg-background/80 backdrop-blur md:block">
             <div className="flex h-16 items-center gap-3 px-4 md:px-8">
               <form onSubmit={submitSearch} className="relative max-w-md flex-1">
@@ -262,13 +223,7 @@ export function DashboardShell({
                 <NotificationsBell />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="grid h-9 w-9 place-items-center overflow-hidden rounded-full bg-ink text-xs font-bold text-cream">
-                      {profile?.avatar_url ? (
-                        <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        inits
-                      )}
-                    </button>
+                    <Avatar profile={profile} inits={inits} />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-60">
                     <DropdownMenuLabel className="truncate">
@@ -291,7 +246,7 @@ export function DashboardShell({
             </div>
           </header>
 
-          {/* ---------- Page ---------- */}
+          {/* Page content — single tree, responsive */}
           <main className="px-4 pb-28 pt-5 md:px-8 md:pb-12 md:pt-8">
             <div
               className={cn(
@@ -311,40 +266,36 @@ export function DashboardShell({
           </main>
         </div>
 
-        {/* ---------- Mobile bottom tab bar ---------- */}
+        {/* Mobile bottom tab bar */}
         <nav className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-40 liquid-glass rounded-[26px] px-1.5 py-1.5 md:hidden">
           <div className="grid grid-cols-5">
-            {[...nav, { to: "/dashboard/settings", key: "nav.settings" as const, short: "Réglages", icon: Settings }].map(
-              (item) => {
-                const active = isActive(item.to, "exact" in item ? item.exact : undefined);
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.to}
-                    to={item.to}
-                    className="flex flex-col items-center gap-1 py-1.5"
-                    aria-label={item.short}
+            {allNav.map((item) => {
+              const active = isActive(item.to, "exact" in item ? item.exact : undefined);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="flex flex-col items-center gap-1 py-1.5"
+                  aria-label={item.short}
+                >
+                  <span
+                    className={cn(
+                      "grid h-9 w-12 place-items-center rounded-full transition-all duration-300",
+                      active ? "liquid-tab-active text-cream" : "text-muted-foreground",
+                    )}
                   >
-                    <span
-                      className={cn(
-                        "grid h-9 w-12 place-items-center rounded-full transition-all duration-300",
-                        active ? "liquid-tab-active text-cream" : "text-muted-foreground",
-                      )}
-                    >
-                      <Icon className="h-[18px] w-[18px]" />
-                    </span>
-                    <span className={cn("text-[10px] font-semibold", active ? "text-foreground" : "text-muted-foreground")}>
-                      {item.short}
-                    </span>
-                  </Link>
-                );
-              },
-            )}
+                    <Icon className="h-[18px] w-[18px]" />
+                  </span>
+                  <span className={cn("text-[10px] font-semibold", active ? "text-foreground" : "text-muted-foreground")}>
+                    {item.short}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
         </nav>
 
-
-        {/* One-time animated Telegram tutorial */}
         <TelegramOnboarding />
       </div>
     </TooltipProvider>

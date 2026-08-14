@@ -7,8 +7,8 @@ import { useEffect, useState } from "react";
 import { Mail, Bell, Slack, Chrome, Github, Check, Trash2, Loader2, Send } from "lucide-react";
 import { useProfile, useUpdateProfile } from "@/hooks/use-profile";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { createProCheckout, syncProAfterCheckout } from "@lib/stripe.functions";
-import { deleteMyAccount } from "@lib/account.functions";
+import { createProCheckout, syncProAfterCheckout } from "@/lib/stripe.functions";
+import { deleteMyAccount } from "@/lib/account.functions";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getTelegramBotUsername,
