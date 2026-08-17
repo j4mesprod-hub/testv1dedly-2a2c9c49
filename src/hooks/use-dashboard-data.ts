@@ -21,5 +21,7 @@ export function useDashboardData() {
     notificationsLoading: notifications.isLoading,
     notificationsError: notifications.error,
     notificationsRefetch: notifications.refetch,
+
+    isLoading: profile.isLoading || deadlines.isLoading || notifications.isLoading,
   };
 }
