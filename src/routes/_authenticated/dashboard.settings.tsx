@@ -96,8 +96,12 @@ function ProfileTab() {
   }, [profile]);
 
   const save = async () => {
-    await update.mutateAsync({ display_name: displayName || null, avatar_url: avatarUrl || null, timezone, language });
-    toast.success("Profil mis à jour");
+    try {
+      await update.mutateAsync({ display_name: displayName || null, avatar_url: avatarUrl || null, timezone, language });
+      toast.success("Profil mis à jour avec succès");
+    } catch (e) {
+      toast.error("Échec de la mise à jour", { description: e instanceof Error ? e.message : "Erreur lors de la sauvegarde" });
+    }
   };
 
   return (
@@ -323,12 +327,16 @@ function SummaryCard() {
   }, [profile]);
 
   const save = async () => {
-    await update.mutateAsync({
-      summary_enabled: enabled,
-      summary_hour: hour,
-      summary_minute: minute,
-    });
-    toast.success("Heure du résumé enregistrée");
+    try {
+      await update.mutateAsync({
+        summary_enabled: enabled,
+        summary_hour: hour,
+        summary_minute: minute,
+      });
+      toast.success("Heure du résumé enregistrée");
+    } catch (e) {
+      toast.error("Échec de l'enregistrement", { description: e instanceof Error ? e.message : "Erreur lors de la sauvegarde" });
+    }
   };
 
   const sendNow = async () => {

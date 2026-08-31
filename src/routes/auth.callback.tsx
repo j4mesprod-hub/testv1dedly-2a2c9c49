@@ -21,7 +21,6 @@ function Callback() {
   const navigate = useNavigate();
   useEffect(() => {
     let cancelled = false;
-    let attempts = 0;
 
     const run = async () => {
       const url = new URL(window.location.href);
@@ -29,34 +28,51 @@ function Callback() {
       const errorDescription =
         url.searchParams.get("error_description") || url.searchParams.get("error");
 
-      // Direct Supabase OAuth (non-Lovable hosting) returns ?code= to exchange.
-      if (code) {
-        try {
-          await supabase.auth.exchangeCodeForSession(code);
-        } catch {
-          /* detectSessionInUrl may already have consumed it */
-        }
-        window.history.replaceState({}, "", "/auth/callback");
-      } else if (errorDescription) {
+      if (errorDescription) {
         navigate({ to: "/auth", replace: true });
         return;
       }
 
-      const tick = async () => {
-        if (cancelled) return;
-        const { data } = await supabase.auth.getUser();
-        if (data.user) {
-          navigate({ to: "/dashboard", replace: true });
-          return;
+      if (code) {
+        try {
+          await supabase.auth.exchangeCodeForSession(code);
+        } catch (e) {
+          console.error("[auth/callback] exchangeCodeForSession failed", e);
         }
-        attempts += 1;
-        if (attempts > 50) {
-          navigate({ to: "/auth", replace: true });
-          return;
+        window.history.replaceState({}, "", "/auth/callback");
+      }
+
+      const { data } = await supabase.auth.getSession();
+      const user = data.session?.user;
+
+      if (cancelled) return;
+
+      if (user) {
+        // Ensure profile row exists for this user
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (!profile) {
+          const fallbackName =
+            user.user_metadata?.full_name ??
+            user.user_metadata?.name ??
+            user.email?.split("@")[0] ??
+            "Utilisateur";
+          await supabase.from("profiles").upsert({
+            id: user.id,
+            display_name: fallbackName,
+            avatar_url: user.user_metadata?.avatar_url ?? null,
+            reminder_email: user.email ?? null,
+          });
         }
-        setTimeout(tick, 200);
-      };
-      tick();
+
+        navigate({ to: "/dashboard", replace: true });
+      } else {
+        navigate({ to: "/auth", replace: true });
+      }
     };
 
     run();

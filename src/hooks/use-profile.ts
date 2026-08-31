@@ -29,10 +29,20 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: async (patch: Partial<Profile>) => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) throw new Error("Not authenticated");
-      const { error } = await supabase.from("profiles").update(patch).eq("id", session.user.id);
-      if (error) throw error;
+      if (!session?.user) throw new Error("Non authentifié");
+      const { data, error } = await supabase
+        .from("profiles")
+        .update(patch)
+        .eq("id", session.user.id)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
+    onSuccess: (updated) => {
+      if (updated) qc.setQueryData(["profile"], updated);
+      qc.invalidateQueries({ queryKey: ["profile"] });
+    },
   });
 }
+
