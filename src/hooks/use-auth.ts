@@ -42,13 +42,16 @@ export function getSessionState(): SessionState {
   return currentState;
 }
 
-/** Resolves immediately if the session is already loaded; otherwise waits for the initial getSession(). */
-export function waitForSession(): Promise<SessionState> {
+/** Resolves with the fresh session state from Supabase auth. */
+export async function waitForSession(): Promise<SessionState> {
   init();
-  if (currentState.ready) return Promise.resolve(currentState);
-  return initPromise!;
+  const { data } = await supabase.auth.getSession();
+  currentState = { user: data.session?.user ?? null, ready: true };
+  emit();
+  return currentState;
 }
 
 export function useSession() {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
+

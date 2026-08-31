@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { lovable } from "@/integrations/lovable/index";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { DeadlyLogo } from "@/components/DeadlyLogo";
@@ -47,37 +46,17 @@ function AuthPage() {
 
   const signIn = async () => {
     setLoading(true);
-    const host = window.location.hostname;
-    const isLovableHost =
-      host.endsWith(".lovable.app") || host.endsWith(".lovable.dev") || host === "localhost";
-
-    // Off Lovable hosting (Vercel, custom domain), the managed OAuth broker paths
-    // (/~oauth/*) do not exist -> 404. Use the direct Supabase OAuth flow there.
-    if (!isLovableHost) {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin + "/auth/callback",
-          queryParams: { prompt: "select_account" },
-        },
-      });
-      if (error) {
-        setLoading(false);
-        toast.error(t("auth.failed"), { description: error.message });
-      }
-      return;
-    }
-
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin + "/auth/callback",
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin + "/auth/callback",
+        queryParams: { prompt: "select_account" },
+      },
     });
-    if (result.error) {
+    if (error) {
       setLoading(false);
-      toast.error(t("auth.failed"), { description: result.error.message });
-      return;
+      toast.error(t("auth.failed"), { description: error.message });
     }
-    if (result.redirected) return;
-    navigate({ to: "/dashboard" });
   };
 
 
